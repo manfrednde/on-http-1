@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
-  version: "0.0.1"
-  title: Redfish v1.0.0
+  version: "1.2.0"
+  title: rackhd redfish v1
 # during dev, should point to your local machine
 #host: localhost:8080
 # basePath prefixes all resource paths
@@ -26,9 +26,9 @@ paths:
     get:
       x-privileges: [ 'Login' ]
       x-authentication-type: [ 'redfish', 'basic', 'anonymous' ]
-      summary: retrieve list of root-level resources 
+      summary: retrieve list of root-level resources
       description: >
-        This object represents the root Redfish service.  All values for resources described 
+        This object represents the root Redfish service.  All values for resources described
         by this schema shall comply to the requirements as described in the Redfish specification.
         This object represents the root Redfish service.
       operationId: getServiceRoot
@@ -80,7 +80,7 @@ paths:
       x-authentication-type: [ 'redfish', 'basic' ]
       summary: retrieve specific information for a physical component
       description: >
-        Retrieves a detailed information catalog for the physical component 
+        Retrieves a detailed information catalog for the physical component
         specified by identifier
       operationId: getChassis
       tags: [ "/redfish/v1" ]
@@ -89,6 +89,7 @@ paths:
           in: path
           required: true
           type: string
+          x-param-handler: skuChassis
       responses:
         200:
           description: Success
@@ -119,6 +120,7 @@ paths:
           in: path
           required: true
           type: string
+          x-param-handler: skuChassis
       responses:
         200:
           description: Success
@@ -149,6 +151,7 @@ paths:
           in: path
           required: true
           type: string
+          x-param-handler: skuChassis
       responses:
         200:
           description: Success
@@ -195,8 +198,8 @@ paths:
       x-authentication-type: [ 'redfish', 'basic' ]
       summary: retrieve information for a specific computer systems (physical and/or virtual)
       description: >
-        defines a computer system and its respective properties.  A computer system represents a 
-        machine (physical or virtual) and the local resources such as memory, cpu and other 
+        defines a computer system and its respective properties.  A computer system represents a
+        machine (physical or virtual) and the local resources such as memory, cpu and other
         devices that can be accessed from that machine.
       operationId: getSystem
       tags: [ "/redfish/v1" ]
@@ -212,6 +215,107 @@ paths:
           description: Success
           schema:
             $ref: "#/definitions/ComputerSystem.1.0.0_ComputerSystem"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Systems/{identifier}/Bios:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve the current bios settings for a specified identifier
+      description: >
+        defines a set of bios resources
+      operationId: listSystemBios
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/Bios.v1_0_1.Bios"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Systems/{identifier}/Bios/Settings:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve the pending bios settings for a specified identifier
+      description: >
+        defines a set of bios resources that are pending
+      operationId: listSystemBiosSettings
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/Bios.v1_0_1.Bios"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    patch:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: patch the pending bios settings for a specified identifier
+      description: >
+        patch a set of bios resources
+      operationId: patchSystemBiosSettings
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/Bios.v1_0_1.Bios"
+      responses:
+        202:
+          description: Success
+          $ref: "#/responses/status_202"
         400:
           $ref: "#/responses/status_400"
         401:
@@ -354,6 +458,326 @@ paths:
           description: Success
           schema:
             $ref: "#/definitions/SimpleStorage.1.0.0_SimpleStorage"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Systems/{identifier}/Storage:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve the storage collection
+      description: >
+        Defines a collection of simple storage collections that are
+        present on the system described by identifier
+      operationId: listStorage
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/StorageCollection_StorageCollection"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Systems/{identifier}/Storage/{index}:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: Retrieve the specific storage instance based on the index
+      description: >
+        Defines a storage subsystem on the device specified by
+        identifier that are present on the system described by identifier
+      operationId: getStorage
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: index
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/Storage.1.1.1_Storage"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Systems/{identifier}/Storage/{index}/Drives/{driveIndex}:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: Retrieve the specific drive instance based on the driveIndex
+      description: >
+        Defines a Drive specified by the driveIndex within a Storage subsystem
+        specified by the index
+      operationId: getDrive
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: index
+          in: path
+          required: true
+          type: string
+        - name: driveIndex
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/Drive.1.1.1_Drive"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    post:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: Add a hot spare the specific drive instance based on the driveIndex
+      description: >
+        Defines a Drive specified by the driveIndex within a Storage subsystem
+        specified by the index
+      operationId: addHotspare
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: index
+          in: path
+          required: true
+          type: string
+        - name: driveIndex
+          in: path
+          required: true
+          type: string
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/Drive.addHotspare"
+      responses:
+        200:
+          description: Success
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Systems/{identifier}/Storage/{index}/Volumes:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: Retrieve the collection of volumes contained in the storage subsystem
+      description: >
+        Defines a collection of volumes contained within a resource
+      operationId: listVolume
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: index
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/VolumeCollection_VolumeCollection"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    post:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: Add a volume to the collection of volumes contained in the storage subsystem
+      description: >
+        Defines a collection of volumes contained within a resource
+      operationId: addVolume
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: index
+          in: path
+          required: true
+          type: string
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/Volume.add"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/VolumeCollection_VolumeCollection"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /Systems/{identifier}/Storage/{index}/Volumes/{volumeIndex}:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: Retrieve the specific volume instance based on the volumeIndex
+      description: >
+        Defines a Volume specified by the volumeIndex within a Storage subsystem
+        specified by the index
+      operationId: getVolume
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: index
+          in: path
+          required: true
+          type: string
+        - name: volumeIndex
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/Volume.1.0.2_Volume"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    delete:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: Retrieve the specific volume instance based on the volumeIndex
+      description: >
+        Defines a Volume specified by the volumeIndex within a Storage subsystem
+        specified by the index
+      operationId: deleteVolume
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: index
+          in: path
+          required: true
+          type: string
+        - name: volumeIndex
+          in: path
+          required: true
+          type: string
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/Volume.delete"
+      responses:
+        200:
+          description: Success
         400:
           $ref: "#/responses/status_400"
         401:
@@ -612,7 +1036,7 @@ paths:
       x-authentication-type: [ 'redfish', 'basic' ]
       summary: install a boot image on a node
       description: >
-        Perform the boot image installation specified in the post data arguments on 
+        Perform the boot image installation specified in the post data arguments on
         the system described by identifier
       operationId: doBootImage
       tags: [ "/redfish/v1" ]
@@ -630,7 +1054,8 @@ paths:
       responses:
         202:
           description: Success
-          $ref: "#/responses/status_202"
+          schema:
+            $ref: "#/definitions/odata.4.0.0_idRef"
         400:
           $ref: "#/responses/status_400"
         401:
@@ -644,7 +1069,7 @@ paths:
           schema:
             $ref: "#/definitions/ErrorResponse"
   /Systems/{identifier}/EthernetInterfaces:
-    x-swagger-router-controller: unimplemented
+    x-swagger-router-controller: systems
     get:
       x-privileges: [ 'Login' ]
       x-authentication-type: [ 'redfish', 'basic' ]
@@ -652,7 +1077,7 @@ paths:
       description: >
         Defines a collection of ethernet interfaces that are
         present on the system described by identifier
-      operationId: unimplemented
+      operationId: listSystemEthernetInterfaces
       tags: [ "/redfish/v1" ]
       parameters:
         - name: identifier
@@ -664,7 +1089,7 @@ paths:
         200:
           description: Success
           schema:
-            $ref: "#/definitions/EthernetInterfaceCollection_EthernetInterfaceCollection"
+            $ref: "#/definitions/EthernetInterfaceCollection.EthernetInterfaceCollection"
         400:
           $ref: "#/responses/status_400"
         401:
@@ -678,14 +1103,14 @@ paths:
           schema:
             $ref: "#/definitions/ErrorResponse"
   /Systems/{identifier}/EthernetInterfaces/{index}:
-    x-swagger-router-controller: unimplemented
+    x-swagger-router-controller: systems
     get:
       x-privileges: [ 'Login' ]
       x-authentication-type: [ 'redfish', 'basic' ]
       summary: Retrieve the ethernet interface by device identifier
       description: >
         Defines an ethernet interface present on the system described by identifier
-      operationId: unimplemented
+      operationId: listSystemEthernetInterfacesById
       tags: [ "/redfish/v1" ]
       parameters:
         - name: identifier
@@ -701,7 +1126,76 @@ paths:
         200:
           description: Success
           schema:
-            $ref: "#/definitions/EthernetInterface.1.0.0_EthernetInterface"
+            $ref: "#/definitions/EthernetInterface.v1_2_0.EthernetInterface"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Systems/{identifier}/SecureBoot:
+    x-swagger-router-controller: systems
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve the current secure boot status
+      description: >
+        Gets the current UEFI Secure Boot status
+        present on the system described by identifier
+      operationId: getSecureBoot
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+      responses:
+        200:
+          description: Success
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    post:
+      x-privileges: [ 'ConfigureComponents' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: enable or disable UEFI Secure Boot
+      description: >
+        Setting this property to true enables UEFI Secure Boot, and setting it to
+        false disables it. This property can be enabled only in UEFI boot mode.
+      operationId: setSecureBoot
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          x-param-handler: sku
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/SecureBoot.1.0.1_SecureBoot.post"
+      responses:
+        202:
+          description: Success
+          schema:
+            $ref: "#/definitions/odata.4.0.0_idRef"
         400:
           $ref: "#/responses/status_400"
         401:
@@ -715,12 +1209,12 @@ paths:
           schema:
             $ref: "#/definitions/ErrorResponse"
   /AccountService:
-    x-swagger-router-controller: unimplemented
+    x-swagger-router-controller: account-service
     get:
       x-privileges: [ 'ConfigureUsers' ]
       x-authentication-type: [ 'redfish', 'basic' ]
       summary: retrieve account service information
-      operationId: unimplemented
+      operationId: getAccountService
       tags: [ "/redfish/v1" ]
       responses:
         200:
@@ -731,40 +1225,47 @@ paths:
           $ref: "#/responses/status_401"
         403:
           $ref: "#/responses/status_403"
-        501:
-          $ref: "#/responses/status_501"
-  /EventService:
-    x-swagger-router-controller: unimplemented
-    get:
-      x-privileges: [ 'Login' ]
-      x-authentication-type: [ 'redfish', 'basic' ]
-      summary: retrieve list of policies used by event service listeners
-      operationId: unimplemented
-      tags: [ "/redfish/v1" ]
-      responses:
-        200:
-          description: Success
+        500:
+          description: Error
           schema:
-            $ref: "#/definitions/EventService.1.0.0_EventService"
-        401:
-          $ref: "#/responses/status_401"
-        403:
-          $ref: "#/responses/status_403"
-        501:
-          $ref: "#/responses/status_501"
-  /ManagerAccounts:
-    x-swagger-router-controller: unimplemented
+            $ref: "#/definitions/ErrorResponse"
+  /AccountService/Accounts:
+    x-swagger-router-controller: account-service
     get:
-      x-privileges: [ 'ConfigureManager' ]
-      x-authentication-type: [ 'redfish', 'basic' ]
-      summary: retrieve list of manager accounts
-      operationId: unimplemented
+      x-privileges: [ 'ConfigureUsers' ]
+      x-authentication-type: [ 'redfish', 'basic']
+      summary: retrieve information about the accounts
+      operationId: getAccounts
       tags: [ "/redfish/v1" ]
       responses:
         200:
           description: Success
           schema:
             $ref: "#/definitions/ManagerAccountCollection_ManagerAccountCollection"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    post:
+      x-privileges: [ 'ConfigureUsers' ]
+      x-authentication-type: [ 'redfish', 'basic', 'anonymous' ]
+      summary: create a user with the provided information
+      operationId: createAccount
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/ManagerAccount.1.0.0_ManagerAccount.post"
+      responses:
+        201:
+          description: Success
+          $ref: "#/responses/status_201"
         400:
           $ref: "#/responses/status_400"
         401:
@@ -777,16 +1278,135 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /ManagerAccounts/{identifier}:
-    x-swagger-router-controller: unimplemented
+  /EventService:
+    x-swagger-router-controller: event-service
     get:
-      x-privileges: [ 'ConfigureManager' ]
+      x-privileges: [ 'Login' ]
       x-authentication-type: [ 'redfish', 'basic' ]
-      summary: retrieve a manager account by name
-      operationId: unimplemented
+      summary: retrieve list of policies used by event service listeners
+      operationId: eventServiceRoot
+      tags: [ "/redfish/v1" ]
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EventService.1.0.0_EventService"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+  /EventService/Subscriptions:
+    x-swagger-router-controller: event-service
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve collection of subscribed events
+      operationId: getEventsCollection
+      tags: [ "/redfish/v1" ]
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EventDestinationCollection_EventDestinationCollection"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+    post:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve collection of subscribed events
+      operationId: createSubscription
       tags: [ "/redfish/v1" ]
       parameters:
-        - name: identifier
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/EventDestination.1.0.0_EventDestination"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EventDestinationCollection_EventDestinationCollection"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        409:
+          $ref: "#/responses/status_409"
+  /EventService/Subscriptions/{index}:
+    x-swagger-router-controller: event-service
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve specific event subscription
+      operationId: getEvent
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: index
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EventDestination.1.0.0_EventDestination"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+    delete:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: delete specific event subscription
+      operationId: deleteEvent
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: index
+          in: path
+          required: true
+          type: string
+      responses:
+        204:
+          description: Success
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+  /EventService/Actions/EventService.SubmitTestEvent:
+    x-swagger-router-controller: event-service
+    post:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: submit a test event action
+      operationId: testEvent
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: body
+          in: body
+          required: false
+          schema:
+            $ref: "#/definitions/testEvent"
+      responses:
+        202:
+          description: Success
+          $ref: "#/responses/status_202"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+  /AccountService/Accounts/{name}:
+    x-swagger-router-controller: account-service
+    get:
+      x-privileges: [ 'ConfigureUsers' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve information about the specified account
+      operationId: getAccount
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: name
           in: path
           required: true
           type: string
@@ -795,6 +1415,56 @@ paths:
           description: Success
           schema:
             $ref: "#/definitions/ManagerAccount.1.0.0_ManagerAccount"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    delete:
+      x-privileges: [ 'ConfigureUsers' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: delete the specified account
+      operationId: removeAccount
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          type: string
+      responses:
+        204:
+          description: Success
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    patch:
+      x-privileges: [ 'ConfigureUsers', 'ConfigureSelf' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: update the user with the provided information
+      operationId: modifyAccount
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          type: string
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/ManagerAccount.1.0.0_ManagerAccount"
+      responses:
+        202:
+          description: Success
+          $ref: "#/responses/status_202"
         400:
           $ref: "#/responses/status_400"
         401:
@@ -808,12 +1478,12 @@ paths:
           schema:
             $ref: "#/definitions/ErrorResponse"
   /Managers:
-    x-swagger-router-controller: unimplemented
+    x-swagger-router-controller: managers
     get:
       x-privileges: [ 'ConfigureManager' ]
       x-authentication-type: [ 'redfish', 'basic' ]
       summary: retrieve list of management servers
-      operationId: unimplemented
+      operationId: listManagers
       tags: [ "/redfish/v1" ]
       responses:
         200:
@@ -833,12 +1503,12 @@ paths:
           schema:
             $ref: "#/definitions/ErrorResponse"
   /Managers/{identifier}:
-    x-swagger-router-controller: unimplemented
+    x-swagger-router-controller: managers
     get:
       x-privileges: [ 'ConfigureManager' ]
       x-authentication-type: [ 'redfish', 'basic' ]
-      summary: retrieve list of management servers
-      operationId: unimplemented
+      summary: retrieve information about a specified management servers
+      operationId: getManager
       tags: [ "/redfish/v1" ]
       parameters:
         - name: identifier
@@ -850,6 +1520,160 @@ paths:
           description: Success
           schema:
             $ref: "#/definitions/Manager.1.0.0_Manager"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    patch:
+      x-privileges: [ 'ConfigureManager' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: update the specified management server
+      operationId: patchManager
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/Manager.1.0.0_Manager"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/Manager.1.0.0_Manager"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        405:
+          $ref: "#/responses/status_405"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Managers/RackHD/EthernetInterfaces:
+    x-swagger-router-controller: managers
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve information about the ethernet interfaces
+      operationId: listLocalEthernetInterfaces
+      tags: [ "/redfish/v1" ]
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EthernetInterfaceCollection.EthernetInterfaceCollection"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Managers/{identifier}/EthernetInterfaces:
+    x-swagger-router-controller: managers
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve information about the ethernet interfaces
+      operationId: listManagerEthernetInterfaces
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EthernetInterfaceCollection.EthernetInterfaceCollection"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Managers/RackHD/EthernetInterfaces/{index}:
+    x-swagger-router-controller: managers
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve information about the specified ethernet interface
+      operationId: getLocalEthernetInterface
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: index
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EthernetInterface.v1_2_0.EthernetInterface"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /Managers/{identifier}/EthernetInterfaces/{index}:
+    x-swagger-router-controller: managers
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve information about the specified ethernet interface
+      operationId: getManagerEthernetInterface
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+        - name: index
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/EthernetInterface.v1_2_0.EthernetInterface"
         400:
           $ref: "#/responses/status_400"
         401:
@@ -892,10 +1716,8 @@ paths:
           $ref: "#/responses/status_403"
         404:
           $ref: "#/responses/status_404"
-        500:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
+        501:
+          $ref: "#/responses/status_501"
   /Managers/{identifier}/SerialInterfaces/{index}:
     x-swagger-router-controller: unimplemented
     get:
@@ -926,10 +1748,8 @@ paths:
           $ref: "#/responses/status_403"
         404:
           $ref: "#/responses/status_404"
-        500:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
+        501:
+          $ref: "#/responses/status_501"
   /Registries:
     x-swagger-router-controller: registry
     get:
@@ -1003,7 +1823,7 @@ paths:
             description: Error
             schema:
               $ref: "#/definitions/ErrorResponse"
-  /Roles:
+  /AccountService/Roles:
     x-swagger-router-controller: roles
     get:
       x-privileges: [ 'ConfigureUsers' ]
@@ -1028,7 +1848,7 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /Roles/{identifier}:
+  /AccountService/Roles/{identifier}:
     x-swagger-router-controller: roles
     get:
       x-privileges: [ 'ConfigureUsers' ]
@@ -1382,41 +2202,143 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /UpdateService/Actions/UpdateService.SimpleUpdate:
+    x-swagger-router-controller: update-service
+    post:
+      x-privileges: [ 'ConfigureComponents' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: update firmware on a node
+      operationId: updateFirmware
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/UpdateService.1.0.0_UpdateService.post"
+      responses:
+        201:
+          description: Success
+          $ref: "#/responses/status_201"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /UpdateService/FirmwareInventory:
+    x-swagger-router-controller: update-service
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: get a list of firmware installed on all nodes managed by this instance of RackHD
+      operationId: getFirmwareInventoryList
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: payload
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/UpdateService.1.0.0_UpdateService"
+      responses:
+        201:
+          description: Success
+          $ref: "#/responses/status_201"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /UpdateService/FirmwareInventory/{identifier}:
+    x-swagger-router-controller: update-service
+    get:
+      x-privileges: [ 'Login' ]
+      x-authentication-type: [ 'redfish', 'basic' ]
+      summary: retrieve information about a specific firmware
+      operationId: getFirmwareInventoryById
+      tags: [ "/redfish/v1" ]
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          type: string
+          description: node identifier
+      responses:
+        201:
+          description: Success
+          $ref: "#/responses/status_201"
+        400:
+          $ref: "#/responses/status_400"
+        401:
+          $ref: "#/responses/status_401"
+        403:
+          $ref: "#/responses/status_403"
+        404:
+          $ref: "#/responses/status_404"
+        500:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /swagger:
     x-swagger-pipe: swagger_raw
 
 responses:
+  status_201:
+    description: >
+      A request that created a new resource completed successfully. The Location header shall
+      be set to the canonical URI for the newly created resource. A representation of the newly
+      created resource may be included in the response body.
   status_202:
     description: >
-      The request has been accepted for processing, but the processing has not been completed. 
-      The Location header shall be set to the URI of a Task resource that can later be queried 
-      to determine the status of the operation. A representation of the Task resource may be 
+      The request has been accepted for processing, but the processing has not been completed.
+      The Location header shall be set to the URI of a Task resource that can later be queried
+      to determine the status of the operation. A representation of the Task resource may be
       included in the response body.
   status_400:
     description: >
-      The request could not be processed because it contains missing or invalid information 
-      (such as validation error on an input field, a missing required value, and so on). 
-      An extended error shall be returned in the response body, as defined in section Extended 
+      The request could not be processed because it contains missing or invalid information
+      (such as validation error on an input field, a missing required value, and so on).
+      An extended error shall be returned in the response body, as defined in section Extended
       Error Handling.
   status_401:
     description: >
       The authentication credentials included with this request are missing or invalid.
   status_403:
     description: >
-      The server recognized the credentials in the request, but those credentials do not 
+      The server recognized the credentials in the request, but those credentials do not
       possess authorization to perform this request.
   status_404:
     description: >
       The request specified a URI of a resource that does not exist.
+  status_405:
+    description: >
+      The method specified in the Request-Line is not allowed for the resource
+      identified by the Request-URI.
+  status_409:
+    description: >
+      The request could not be completed due to a conflict with the current state
+      of the target resource.
   status_501:
     description: >
-      The server does not (currently) support the functionality required to fulfill the request. 
-      This is the appropriate response when the server does not recognize the request method 
+      The server does not (currently) support the functionality required to fulfill the request.
+      This is the appropriate response when the server does not recognize the request method
       and is not capable of supporting the method for any resource.
 definitions:
   AccountService.1.0.0_AccountService:
-    description: This is the schema definition for the Account Service.  It represents
-      the properties for the service itself and has links to the actual list of accounts.
+    description: This is the schema definition for the Account Service.  It represents the properties for the service itself and has links to the actual list of accounts.
     properties:
       '@odata.context':
         format: uri
@@ -1496,6 +2418,74 @@ definitions:
         type: boolean
       Status:
         $ref: '#/definitions/Resource_Status'
+    type: object
+#  Bios.ChangePassword:
+#    description: This action is used to change the BIOS passwords.
+#    properties:
+#      target: {}
+#      title: {}
+#    type: object
+#  Bios.ResetBios:
+#    description: This action is used to reset the BIOS attributes to default.
+#    properties:
+#      target: {}
+#      title: {}
+#    type: object
+  Bios.v1_0_0.Actions:
+    properties:
+      Oem:
+        $ref: '#/definitions/Bios.v1_0_0.OemActions'
+    type: object
+  Bios.v1_0_0.Attributes:
+    properties: {}
+    type: object
+  Bios.v1_0_0.OemActions:
+    properties: {}
+    type: object
+  Bios.v1_0_1.Bios:
+    description: Bios contains properties surrounding a BIOS Attribute Registry (where
+      the system-specific BIOS attributes are described) and the Actions needed to
+      perform changes to BIOS settings, which typically require a system reset to
+      apply.
+    properties:
+      '@odata.context':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.id':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.type':
+        readOnly: true
+        type: string
+      Actions:
+        $ref: '#/definitions/Bios.v1_0_0.Actions'
+        description: The available actions for this resource.
+      AttributeRegistry:
+        description: The Resource ID of the Attribute Registry for the BIOS Attributes
+          resource.
+        readOnly: true
+        type: string
+      Attributes:
+        $ref: '#/definitions/Bios.v1_0_0.Attributes'
+        description: This is the manufacturer/provider specific list of BIOS attributes.
+      Description:
+        readOnly: true
+        type: string
+      Id:
+        readOnly: true
+        type: string
+      Name:
+        readOnly: true
+        type: string
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
+    required:
+    - Id
+    - Name
     type: object
   Chassis.1.0.0_Chassis:
     description: This is the schema definition for the Chassis resource.  It represents
@@ -1807,6 +2797,10 @@ definitions:
           system for inventory or other client purposes
         readOnly: false
         type: string
+      Bios:
+        $ref: "#/definitions/Bios.v1_0_1.Bios"
+        description: A reference to the BIOS settings associated with this system.
+        readOnly: true
       BiosVersion:
         description: The version of the system BIOS or primary system firmware.
         type: string
@@ -1819,7 +2813,7 @@ definitions:
         readOnly: true
         type: string
       EthernetInterfaces:
-        $ref: '#/definitions/EthernetInterfaceCollection_EthernetInterfaceCollection'
+        $ref: '#/definitions/EthernetInterfaceCollection.EthernetInterfaceCollection'
         description: A reference to the collection of Ethernet interfaces associated
           with this system
         readOnly: true
@@ -2051,7 +3045,127 @@ definitions:
         description: This is the manufacturer/provider specific extension moniker
           used to divide the Oem object into sections.
     type: object
-  EthernetInterface.1.0.0_EthernetInterface:
+  Drive.1.1.1_Drive: #TODO
+    description: This schema defines a single physical disk
+  Endpoint.Endpoint:
+    description: This is the schema definition for the Endpoint resource.  It represents
+      the properties of an entity that sends or receives protocol defined messages
+      over a transport.
+    properties:
+      '@odata.context':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.id':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.type':
+        readOnly: true
+        type: string
+      Description:
+        description: Provides a description of this resource and is used for commonality  in
+          the schema definitions.
+        readOnly: true
+      Id:
+        description: Uniquely identifies the resource within the collection of like resources.
+        readOnly: true
+        type: string
+      Name:
+        description: The name of the resource or array element.
+        readOnly: true
+        type: string
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
+    required:
+    - Name
+    - Id
+    type: object
+  EthernetInterface.EthernetInterface:
+    description: Contains the properties needed to describe and configure a single,
+      logical Ethernet Interface.
+    properties:
+      '@odata.context':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.id':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.type':
+        readOnly: true
+        type: string
+      Description:
+        description: Provides a description of this resource and is used for commonality  in
+          the schema definitions.
+        readOnly: true
+        type: string
+      Id:
+        description: Uniquely identifies the resource within the collection of like resources.
+        readOnly: true
+        type: string
+      Name:
+        description: The name of the resource or array element.
+        readOnly: true
+        type: string
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
+    required:
+    - Name
+    - Id
+    type: object
+  EthernetInterface.v1_0_0.IPv6AddressPolicyEntry:
+    properties:
+      Label:
+        description: The IPv6 Label (as defined in RFC 6724 section 2.1).
+        maximum: 100
+        minimum: 0
+        readOnly: false
+        type: number
+      Precedence:
+        description: The IPv6 Precedence (as defined in RFC 6724 section 2.1.
+        maximum: 100
+        minimum: 1
+        readOnly: false
+        type: number
+      Prefix:
+        description: The IPv6 Address Prefix (as defined in RFC 6724 section 2.1).
+        readOnly: false
+        type: string
+    type: object
+  EthernetInterface.v1_0_0.MACAddress:
+    pattern: ^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$
+    type: string
+  EthernetInterface.v1_1_0.LinkStatus:
+    enum:
+    - LinkUp
+    - NoLink
+    - LinkDown
+    type: string
+  EthernetInterface.v1_1_0.Links:
+    properties:
+      Endpoints:
+        description: An array of references to the endpoints that connect to this
+          ethernet interface.
+        items:
+          $ref: '#/definitions/Endpoint.Endpoint'
+        readOnly: true
+        type: array
+      Endpoints@odata.count:
+        readOnly: true
+        type: number
+      Endpoints@odata.navigationLink:
+        $ref: '#/definitions/odata.4.0.0_idRef'
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: Oem extension object.
+    type: object
+  EthernetInterface.v1_2_0.EthernetInterface:
     description: This schema defines a simple ethernet NIC resource.
     properties:
       '@odata.context':
@@ -2068,39 +3182,41 @@ definitions:
       AutoNeg:
         description: This indicates if the speed and duplex are automatically negotiated
           and configured on this interface.
+        readOnly: false
         type: boolean
       Description:
-        description: Provides a description of this resource and is used for commonality  in
-          the schema definitions.
+        description: Uniquely identifies the resource within the collection of like
+          resources.
         readOnly: true
         type: string
       FQDN:
         description: This is the complete, fully qualified domain name obtained by
           DNS for this interface.
+        readOnly: false
         type: string
       FullDuplex:
         description: This indicates if the interface is in Full Duplex mode or not.
+        readOnly: false
         type: boolean
       HostName:
-        description: The DNS Host Name, without any domain information
+        description: The DNS Host Name, without any domain information.
+        readOnly: false
         type: string
       IPv4Addresses:
-        description: The IPv4 addresses assigned to this interface
+        description: The IPv4 addresses assigned to this interface.
         items:
-          $ref: '#/definitions/IPAddresses.1.0.0_IPv4Address'
-        readOnly: true
+          $ref: '#/definitions/IPAddresses.v1_0_0.IPv4Address'
         type: array
       IPv6AddressPolicyTable:
-        description: An array representing the RFC3484 Address Selection Policy Table.
+        description: An array representing the RFC 6724 Address Selection Policy Table.
         items:
-          $ref: '#/definitions/EthernetInterface.1.0.0_IPv6AddressPolicyEntry'
+          $ref: '#/definitions/EthernetInterface.v1_0_0.IPv6AddressPolicyEntry'
         type: array
       IPv6Addresses:
         description: This array of objects enumerates all of the currently assigned
           IPv6 addresses on this interface.
         items:
-          $ref: '#/definitions/IPAddresses.1.0.0_IPv6Address'
-        readOnly: true
+          $ref: '#/definitions/IPAddresses.v1_0_0.IPv6Address'
         type: array
       IPv6DefaultGateway:
         description: This is the IPv6 default gateway address that is currently in
@@ -2111,8 +3227,7 @@ definitions:
         description: This array of objects represents all of the IPv6 static addresses
           to be assigned on this interface.
         items:
-          $ref: '#/definitions/IPAddresses.1.0.0_IPv6StaticAddress'
-        readOnly: true
+          $ref: '#/definitions/IPAddresses.v1_0_0.IPv6StaticAddress'
         type: array
       Id:
         description: Uniquely identifies the resource within the collection of like
@@ -2121,15 +3236,25 @@ definitions:
         type: string
       InterfaceEnabled:
         description: This indicates whether this interface is enabled.
+        readOnly: false
         type: boolean
+      LinkStatus:
+        $ref: '#/definitions/EthernetInterface.v1_1_0.LinkStatus'
+        description: The link status of this interface (port).
+        readOnly: true
+      Links:
+        $ref: '#/definitions/EthernetInterface.v1_1_0.Links'
+        description: Contains references to other resources that are related to this
+          resource.
       MACAddress:
+        $ref: '#/definitions/EthernetInterface.v1_0_0.MACAddress'
         description: This is the currently configured MAC address of the (logical
           port) interface.
-        pattern: ^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$
-        type: string
+        readOnly: false
       MTUSize:
         description: This is the currently configured Maximum Transmission Unit (MTU)
           in bytes on this interface.
+        readOnly: false
         type: number
       MaxIPv6StaticAddresses:
         description: This indicates the maximum number of Static IPv6 addresses that
@@ -2138,8 +3263,8 @@ definitions:
         type: number
       Name:
         description: The name of the resource or array element.
-        readOnly: true
         type: string
+        readOnly: true
       NameServers:
         description: This represents DNS name servers that are currently in use on
           this interface.
@@ -2152,48 +3277,64 @@ definitions:
         description: This is the manufacturer/provider specific extension moniker
           used to divide the Oem object into sections.
       PermanentMACAddress:
+        $ref: '#/definitions/EthernetInterface.v1_0_0.MACAddress'
         description: This is the permanent MAC address assigned to this interface
-          (port)
-        pattern: ^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$
+          (port).
         readOnly: true
-        type: string
       SpeedMbps:
         description: This is the current speed in Mbps of this interface.
+        readOnly: false
         type: number
       Status:
         $ref: '#/definitions/Resource_Status'
       UefiDevicePath:
-        description: The UEFI device path for this interface
+        description: The UEFI device path for this interface.
         readOnly: true
         type: string
       VLAN:
-        $ref: '#/definitions/VLanNetworkInterface.1.0.0_VLAN'
+        $ref: '#/definitions/VLanNetworkInterface.v1_0_0.VLAN'
         description: If this Network Interface supports more than one VLAN, this property
           will not be present and the client should look for VLANs collection in the
           link section of this resource.
       VLANs:
-        $ref: '#/definitions/VLanNetworkInterfaceCollection_VLanNetworkInterfaceCollection'
+        $ref: '#/definitions/VLanNetworkInterfaceCollection.VLanNetworkInterfaceCollection'
         description: This is a reference to a collection of VLANs and is only used
           if the interface supports more than one VLANs.
         readOnly: true
+    required:
+    - Name
+    - Id
     type: object
-  EthernetInterface.1.0.0_IPv6AddressPolicyEntry:
+  EthernetInterfaceCollection.EthernetInterfaceCollection:
+    description: A Collection of EthernetInterface resource instances.
     properties:
-      Label:
-        description: The IPv6 Label (as defined in RFC 6724 section 2.1)
-        maximum: 100
-        minimum: 0
-        type: number
-      Precedence:
-        description: The IPv6 Precedence (as defined in RFC 6724 section 2.1
-        maximum: 100
-        minimum: 1
-        type: number
-      Prefix:
-        description: The IPv6 Address Prefix (as defined in RFC 3484 section 2.1)
+      Description:
+        description: Uniquely identifies the resource within the collection of like
+          resources.
+        readOnly: true
         type: string
+      Members:
+        description: Contains the members of this collection.
+        items:
+          $ref: '#/definitions/EthernetInterface.EthernetInterface'
+        readOnly: true
+        type: array
+      Members@odata.count:
+        readOnly: true
+        type: number
+      Members@odata.navigationLink:
+        $ref: '#/definitions/odata.4.0.0_idRef'
+      Name:
+        description: The name of the resource or array element.
+        type: string
+        readOnly: true
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
     type: object
-  EthernetInterfaceCollection_EthernetInterfaceCollection:
+  EventDestination.1.0.0_EventDestination:
+    description: This is the base type for resources and referenceable members.
     properties:
       '@odata.context':
         format: uri
@@ -2206,22 +3347,43 @@ definitions:
       '@odata.type':
         readOnly: true
         type: string
+      Context:
+        description: A client-supplied string that is stored with the event destination
+          subscription.
+        type: string
       Description:
         description: Provides a description of this resource and is used for commonality  in
           the schema definitions.
         readOnly: true
         type: string
-      Members:
-        description: Contains the members of this collection.
+      Destination:
+        description: The URI of the destination Event Service.
+        readOnly: true
+        type: string
+      EventTypes:
+        description: This property shall contain the types of events that shall be
+          sent to the desination.
         items:
-          $ref: '#/definitions/odata.4.0.0_idRef'
+          enum:
+          - StatusChange
+          - ResourceUpdated
+          - ResourceAdded
+          - ResourceRemoved
+          - Alert
+          type: string
         readOnly: true
         type: array
-      Members@odata.count:
+      HttpHeaders:
+        description: This is for setting HTTP headers, such as authorization information.  This
+          object will be null on a GET.
+        items:
+          $ref: '#/definitions/EventDestination.1.0.0_HttpHeaderProperty'
+        type: array
+      Id:
+        description: Uniquely identifies the resource within the collection of like
+          resources.
         readOnly: true
-        type: number
-      Members@odata.navigationLink:
-        $ref: '#/definitions/odata.4.0.0_idRef'
+        type: string
       Name:
         description: The name of the resource or array element.
         readOnly: true
@@ -2230,6 +3392,22 @@ definitions:
         $ref: '#/definitions/Resource_Oem'
         description: This is the manufacturer/provider specific extension moniker
           used to divide the Oem object into sections.
+      Protocol:
+        description: The protocol type of the event connection.
+        enum:
+        - Redfish
+        readOnly: true
+        type: string
+    required:
+    - Destination
+    - EventTypes
+    - Context
+    - Protocol
+    type: object
+  EventDestination.1.0.0_HttpHeaderProperty:
+    description: The value of the HTTP header is the property value.  The header name
+      is the property name.
+    properties: {}
     type: object
   EventDestinationCollection_EventDestinationCollection:
     properties:
@@ -2355,82 +3533,96 @@ definitions:
         description: Friendly action name
         type: string
     type: object
-  IPAddresses.1.0.0_IPv4Address:
+  IPAddresses.v1_0_0.AddressState:
+    enum:
+    - Preferred
+    - Deprecated
+    - Tentative
+    - Failed
+    type: string
+  IPAddresses.v1_0_0.IPv4Address:
     properties:
       Address:
         description: This is the IPv4 Address.
         pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
+        readOnly: false
         type: string
       AddressOrigin:
+        $ref: '#/definitions/IPAddresses.v1_0_0.IPv4AddressOrigin'
         description: This indicates how the address was determined.
-        enum:
-        - Static
-        - DHCP
-        - BOOTP
-        - IPv4LinkLocal
         readOnly: true
-        type: string
       Gateway:
         description: This is the IPv4 gateway for this address.
+        pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
+        readOnly: false
         type: string
       Oem:
         $ref: '#/definitions/Resource_Oem'
       SubnetMask:
+        $ref: '#/definitions/IPAddresses.v1_0_0.SubnetMask'
         description: This is the IPv4 Subnet mask.
-        pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
-        type: string
+        readOnly: false
     type: object
-  IPAddresses.1.0.0_IPv6Address:
+  IPAddresses.v1_0_0.IPv4AddressOrigin:
+    enum:
+    - Static
+    - DHCP
+    - BOOTP
+    - IPv4LinkLocal
+    type: string
+  IPAddresses.v1_0_0.IPv6Address:
     properties:
       Address:
         description: This is the IPv6 Address.
+        readOnly: false
         type: string
       AddressOrigin:
+        $ref: '#/definitions/IPAddresses.v1_0_0.IPv6AddressOrigin'
         description: This indicates how the address was determined.
-        enum:
-        - Static
-        - DHCPv6
-        - LinkLocal
-        - SLAAC
         readOnly: true
-        type: string
       AddressState:
+        $ref: '#/definitions/IPAddresses.v1_0_0.AddressState'
         description: The current state of this address as defined in RFC 4862.
-        enum:
-        - Preferred
-        - Deprecated
-        - Tentative
-        - Failed
         readOnly: true
-        type: string
       Oem:
         $ref: '#/definitions/Resource_Oem'
       PrefixLength:
+        $ref: '#/definitions/IPAddresses.v1_0_0.PrefixLength'
         description: This is the IPv6 Address Prefix Length.
-        maximum: 128
-        minimum: 1
         readOnly: true
-        type: number
     type: object
-  IPAddresses.1.0.0_IPv6StaticAddress:
+  IPAddresses.v1_0_0.IPv6AddressOrigin:
+    enum:
+    - Static
+    - DHCPv6
+    - LinkLocal
+    - SLAAC
+    type: string
+  IPAddresses.v1_0_0.IPv6StaticAddress:
     description: This object represents a single IPv6 static address to be assigned
       on a network interface.
     properties:
       Address:
         description: A valid IPv6 address.
+        readOnly: false
         type: string
       Oem:
         $ref: '#/definitions/Resource_Oem'
       PrefixLength:
+        $ref: '#/definitions/IPAddresses.v1_0_0.PrefixLength'
         description: The Prefix Length of this IPv6 address.
-        maximum: 128
-        minimum: 1
         readOnly: true
-        type: number
     required:
-    - Address
     - PrefixLength
+    - Address
     type: object
+  IPAddresses.v1_0_0.PrefixLength:
+    maximum: 128
+    minimum: 1
+    type: number
+  IPAddresses.v1_0_0.SubnetMask:
+    pattern: ^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$
+    type: string
   JsonSchemaFile.1.0.0_JsonSchemaFile:
     description: This is the schema definition for the Schema File locator resource.
     properties:
@@ -3041,7 +4233,7 @@ definitions:
         readOnly: true
         type: string
       EthernetInterfaces:
-        $ref: '#/definitions/EthernetInterfaceCollection_EthernetInterfaceCollection'
+        $ref: '#/definitions/EthernetInterfaceCollection.EthernetInterfaceCollection'
         description: This is a reference to a collection of NICs that this manager
           uses for network communication.  It is here that clients will find NIC configuration
           options and settings.
@@ -3284,6 +4476,26 @@ definitions:
         description: This property contains the user name for the account.
         type: string
     type: object
+  ManagerAccount.1.0.0_ManagerAccount.post:
+    allOf:
+      - $ref:  "#/definitions/ManagerAccount.1.0.0_ManagerAccount"
+      - type: object
+        required:
+        - Password
+        - RoleId
+        - UserName
+        properties:
+          Password:
+            description: This property is used with a PATCH or PUT to write the password
+              for the account.  This property is null on a GET.
+            type: string
+          RoleId:
+            description: This property contains the Role for this account.
+            type: string
+          UserName:
+            description: This property contains the user name for the account.
+            type: string
+
   ManagerAccountCollection_ManagerAccountCollection:
     properties:
       '@odata.context':
@@ -4208,11 +5420,10 @@ definitions:
       version:
         type: string
     required:
-    - domain
-    - hostname
+    - version
+    - repo
     - osName
     - rootPassword
-    - dnsServers
   RackHD.BootImage_BootImageList:
     properties:
       osName:
@@ -4231,8 +5442,14 @@ definitions:
         type: string
       netmask:
         type: string
-      vlanId:
-        type: string
+      vlanIds:
+        type: array
+        items:
+          type: number
+    required:
+    - ipAddr
+    - netmask
+    - gateway
   RackHD.BootImage_NetworkDevice:
     properties:
       device:
@@ -4241,6 +5458,8 @@ definitions:
         $ref: '#/definitions/RackHD.BootImage_NetworkAddress'
       ipv6:
         $ref: '#/definitions/RackHD.BootImage_NetworkAddress'
+    required:
+    - device
   RackHD.BootImage_Users:
     properties:
       name:
@@ -4251,6 +5470,9 @@ definitions:
         type: string
       uid:
         type: number
+    required:
+    - name
+    - password
   RackHD.ResetAction_ResetAction:
     description: This is the base type for the reset action.
     properties:
@@ -4884,6 +6106,48 @@ definitions:
         description: This is the manufacturer/provider specific extension moniker
           used to divide the Oem object into sections.
     type: object
+  Storage.1.1.1_Storage: #TODO
+    description: This is the schema definition for the Storage resource. It represents a set
+      of storage controllers (physical or virtual) and the resources such as volumes that can
+      be accessed from that subsystem.
+  StorageCollection_StorageCollection:
+    properties:
+      '@odata.context':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.id':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.type':
+        readOnly: true
+        type: string
+      Description:
+        description: Provides a description of this resource and is used for commonality  in
+          the schema definitions.
+        readOnly: true
+        type: string
+      Members:
+        description: Contains the members of this collection.
+        items:
+          $ref: '#/definitions/odata.4.0.0_idRef'
+        readOnly: true
+        type: array
+      Members@odata.count:
+        readOnly: true
+        type: number
+      Members@odata.navigationLink:
+        $ref: '#/definitions/odata.4.0.0_idRef'
+      Name:
+        description: The name of the resource or array element.
+        readOnly: true
+        type: string
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
+    type: object
   Task.1.0.0_Task:
     description: This is the schema definition for a Task resource.
     properties:
@@ -4974,6 +6238,7 @@ definitions:
         description: Provides a description of this resource and is used for commonality  in
           the schema definitions.
         readOnly: true
+        type: string
       Members:
         description: Contains the members of this collection.
         items:
@@ -5319,18 +6584,9 @@ definitions:
       Temperatures@odata.navigationLink:
         $ref: '#/definitions/odata.4.0.0_idRef'
     type: object
-  VLanNetworkInterface.1.0.0_VLAN:
-    properties:
-      VLANEnable:
-        description: This indicates if this VLAN is enabled.
-        type: boolean
-      VLANId:
-        description: This indicates the VLAN identifier for this VLAN.
-        maximum: 4095
-        minimum: 0
-        type: number
-    type: object
-  VLanNetworkInterfaceCollection_VLanNetworkInterfaceCollection:
+  VLanNetworkInterface.VLanNetworkInterface:
+    description: This resource contains information for a Virtual LAN (VLAN) network
+      instance available on a manager, system or other device.
     properties:
       '@odata.context':
         format: uri
@@ -5344,14 +6600,54 @@ definitions:
         readOnly: true
         type: string
       Description:
-        description: Provides a description of this resource and is used for commonality  in
-          the schema definitions.
+        description: Uniquely identifies the resource within the collection of like
+          resources.
+        readOnly: true
+        type: string
+      Id:
+        description: Uniquely identifies the resource within the collection of like
+          resources.
+        readOnly: true
+        type: string
+      Name:
+        description: The name of the resource or array element.
+        readOnly: true
+        type: string
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
+    required:
+    - Name
+    - Id
+    type: object
+  VLanNetworkInterface.v1_0_0.VLAN:
+    properties:
+      VLANEnable:
+        description: This indicates if this VLAN is enabled.
+        readOnly: false
+        type: boolean
+      VLANId:
+        $ref: '#/definitions/VLanNetworkInterface.v1_0_0.VLANId'
+        description: This indicates the VLAN identifier for this VLAN.
+        readOnly: false
+    type: object
+  VLanNetworkInterface.v1_0_0.VLANId:
+    maximum: 4094
+    minimum: 0
+    type: number
+  VLanNetworkInterfaceCollection.VLanNetworkInterfaceCollection:
+    description: A Collection of VLanNetworkInterface resource instances.
+    properties:
+      Description:
+        description: Uniquely identifies the resource within the collection of like
+          resources.
         readOnly: true
         type: string
       Members:
         description: Contains the members of this collection.
         items:
-          $ref: '#/definitions/odata.4.0.0_idRef'
+          $ref: '#/definitions/VLanNetworkInterface.VLanNetworkInterface'
         readOnly: true
         type: array
       Members@odata.count:
@@ -5475,6 +6771,203 @@ definitions:
         description: This is the manufacturer/provider specific extension moniker
           used to divide the Oem object into sections.
     type: object
+  VolumeCollection_VolumeCollection:
+    properties:
+      '@odata.context':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.id':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.type':
+        readOnly: true
+        type: string
+      Description:
+        description: Provides a description of this resource and is used for commonality  in
+          the schema definitions.
+        readOnly: true
+        type: string
+      Members:
+        description: Contains the members of this collection.
+        items:
+          $ref: '#/definitions/odata.4.0.0_idRef'
+        readOnly: true
+        type: array
+      Members@odata.count:
+        readOnly: true
+        type: number
+      Members@odata.navigationLink:
+        $ref: '#/definitions/odata.4.0.0_idRef'
+      Name:
+        description: The name of the resource or array element.
+        readOnly: true
+        type: string
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
+    type: object
+  Volume.1.0.2_Volume: #TODO
+    type: object
+    properties: 
+      '@odata.context':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.id':
+        format: uri
+        readOnly: true
+        type: string
+      '@odata.type':
+        readOnly: true
+        type: string
+      Oem:
+        $ref: '#/definitions/Resource_Oem'
+        description: This is the manufacturer/provider specific extension moniker
+          used to divide the Oem object into sections.
+      Id:
+        description: Uniquely identifies the resource within the collection of like resources.
+        readOnly: true
+        type: string
+      Description:
+        description: Provides a description of this resource and is used for commonality in the schema definitions.
+        readOnly: true
+        type: string
+      Name:
+        description: The name of the resource or array element.
+        readOnly: true
+        type: string
+      Status:
+        $ref: '#/definitions/Resource_Status'
+      CapacityBytes: 
+        type: number
+        readOnly: true
+        description: The size in bytes of this Volume.
+      VolumeType: 
+        enum:
+        - RawDevice
+        - NonRedundant
+        - Mirrored
+        - StripedWithParity
+        - SpannedMirrors
+        - SpannedStripesWithParity
+        type: string
+        readOnly: true
+        description: The type of this volume.
+      Encrypted:
+        type: boolean
+        readOnly: false
+        description: Is this Volume encrypted.
+      EncryptionTypes:
+        type: array
+        items:
+          enum:
+          - NativeDriveEncryption
+          - ControllerAssisted
+          - SoftwareAssisted
+        readOnly: false
+        description: The types of encryption used by this Volume.
+      BlockSizeBytes:
+        type: number
+        readOnly: true
+        description: The size of the smallest addressible unit (Block) of this volume in bytes.
+      Operations: 
+        type: array
+        items:
+          properties:
+            OperationName:
+              type: string
+              readOnly: true
+              description: The name of the operation.
+            PercentageComplete:
+              type: number
+              readOnly: true
+              description: The percentage of the operation that has been completed.
+            AssociatedTask:
+              $ref: '#/definitions/Task.1.0.0_Task'
+              readOnly: true
+              description: A reference to the task associated with the operation if any.
+        description: The operations currently running on the Volume.
+      OptimumIOSizeBytes:
+        type: number
+        readOnly: true
+        description: The size in bytes of this Volume's optimum IO size.
+      Links:
+        properties:
+          Oem:
+            $ref: '#/definitions/Resource_Oem'
+            description: This is the manufacturer/provider specific extension moniker
+              used to divide the Oem object into sections.
+          Drives@odata.count:
+            readOnly: true
+            type: number
+          Drives@odata.navigationLink:
+            $ref: '#/definitions/odata.4.0.0_idRef'
+          Drives:
+            description: An array of references to the drives which contain this volume. This will reference Drives that either wholly or only partly contain this volume.
+            items:
+              $ref: '#/definitions/odata.4.0.0_idRef'
+            readOnly: true
+            type: array  
+        description: Contains references to other resources that are related to this resource.
+      Actions:
+        type: object
+        properties:
+          Oem:
+            $ref: '#/definitions/Resource_Oem'
+            description: This is the manufacturer/provider specific extension moniker used to divide the Oem object into sections.
+          "#Volume.Initialize":
+            type: object
+            properties:
+              title:
+                type: string
+                description: Friendly action name
+              target: 
+                type: string
+                format: uri
+                description: Link to invoke action
+            description: This action is used to prepare the contents of the volume for use by the system.
+        description: The available actions for this resource.
+    required:
+    - Id
+    - Name
+    description: Volume contains properties used to describe a volume, virtual disk, LUN, or other logical storage entity for any system.
+  Volume.delete:
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+    required:
+    - username
+    - password
+  Volume.add:
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+      volume:
+        $ref: '#/definitions/Volume.1.0.2_Volume'
+    required:
+    - username
+    - password
+  Drive.addHotspare:
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+      hotspareType:
+        type: string
+      volumeId:
+        type: string
+    required:
+    - username
+    - password
+    - hotspareType
   odata.4.0.0_idRef:
     properties:
       '@odata.id':
@@ -5488,3 +6981,33 @@ definitions:
     properties:
       message:
         type: string
+  testEvent:
+    type: object
+  UpdateService.1.0.0_UpdateService:
+    properties:
+      FirmwareInventory:
+        description: The value of this property shall be a link to a resource of type SoftwareInventoryCollection.
+        type: string
+    type: object
+  UpdateService.1.0.0_UpdateService.post:
+    properties:
+      ImageURI:
+        description: The URI of the firmware update package.
+        type: string
+      Targets:
+        description: The identifiers of the nodes on which to perform the firmware update.
+        items:
+          type: string
+        type: array
+    type: object
+    required:
+    - ImageURI
+    - Targets
+  SecureBoot.1.0.1_SecureBoot.post:
+    properties:
+      SecureBootEnable:
+        description: The desired Secure Boot setting.
+        type: boolean
+    type: object
+    required:
+    - SecureBootEnable

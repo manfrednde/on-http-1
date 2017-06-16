@@ -1,0 +1,41 @@
+{
+    "title": "default-obm-service",
+    "definitions": {
+        "ObmPatch": {
+            "description": "Vmrun settings",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "nodeId": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "vmxpath": {
+                            "description": "VMX path",
+                            "type": "string"
+                        }
+                    },
+                    "required": ["vmxpath"]
+                }
+            }
+        },
+        "ObmPatch": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"}
+            ]
+        },
+        "Obm": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"},
+                {"required": ["nodeId", "service", "config"]}
+            ]
+        }
+    }
+}

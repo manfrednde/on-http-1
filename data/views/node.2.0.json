@@ -1,23 +1,68 @@
 {
-  "autoDiscover": "<%=autoDiscover%>",
-  "createdAt": "<%=createdAt%>",
-  "id" : "<%=id%>",
-  "name": "<%=name%>",
-<% if (hasOwnProperty("identifiers")) { %>
-  "identifiers": <%- JSON.stringify(identifiers) %>,
-<% } else  {%>
-  "identifiers": [],
-<% } %>
-<% if (hasOwnProperty("tags")) { %>
-   "tags": <%- JSON.stringify(tags) %>,
-<% } else  {%>
-  "tags": [],
-<% } %>
-<% if (hasOwnProperty("obmSettings")) { %>
-  "obmSettings": <%- JSON.stringify(obmSettings) %>,
-<% } else  {%>
-  "obmSettings": [],
-<% } %>
-  "type": "<%=type%>",
-  "updatedAt": "<%=updatedAt%>"
+    "autoDiscover": <%=autoDiscover%>,
+    "catalogs": "<%=basepath %>/nodes/<%=id%>/catalogs",
+    "id" : "<%=id%>",
+    <% if (hasOwnProperty("identifiers")) { %>
+    "identifiers": <%- JSON.stringify(identifiers) %>,
+    <% } else  {%>
+    "identifiers": [],
+    <% } %>
+    "name": "<%=name%>",
+    <% if (obms == null) { %>    
+    "obms": null,
+    <% } else { %>
+    "obms":[
+    <% obms.forEach(function (value, i, arr){ %>
+    {
+        "service": "<%=value.service%>",
+        "ref":"<%=basepath %>/obms/<%=value.id%>"
+    }
+    <%= ( arr.length > 0 && i < arr.length-1 ) ? ',': '' %>
+    <% }); %>
+    ],
+    <% } %>
+    "tags": "<%=basepath %>/nodes/<%=id%>/tags",
+    "pollers": "<%=basepath %>/nodes/<%=id%>/pollers",
+    "relations" :[
+    <% relations.forEach(function (value, i, arr){ %>
+    {
+        "relationType": "<%=value.relationType%>",
+        <% if (value.info == null) { %>
+        "info": null,
+        <% } else { %>
+        "info": <%- JSON.stringify(value.info) %>,
+        <% } %>
+        "targets": [
+        <% value.targets.forEach(function ( item, i, arr){ %>
+            "<%=item %>" 
+        <%= ( arr.length > 0 && i < arr.length-1 ) ? ',': '' %>
+        <% }); %>
+        ]
+    }
+    <%= ( arr.length > 0 && i < arr.length-1 ) ? ',': '' %>
+    <% }); %>
+    ],
+    <% if (hasOwnProperty("sku")) { %>
+    <% if (sku === null) { %>
+    "sku" : null,
+    <% } else  {%>
+    "sku" : "<%=basepath %>/skus/<%=sku%>",
+    <% } %>
+    <% } %>
+    "type": "<%=type%>",
+    "workflows": "<%=basepath %>/nodes/<%=id%>/workflows",
+    <% if (ibms === null) { %>
+    "ibms": null,
+    <% } else { %>
+    "ibms":[
+    <% ibms.forEach(function (value, i, arr){ %>
+    {
+        "service": "<%=value.service%>",
+        "ref":"<%=basepath %>/ibms/<%=value.id%>"
+    }
+    <%= ( arr.length > 0 && i < arr.length-1 ) ? ',': '' %>
+    <% }); %>
+    ]
+    <% } %>
+
 }

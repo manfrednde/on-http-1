@@ -6,6 +6,10 @@
 describe('Http.Api.workflowTasks.2.0', function () {
     var waterline;
     var workflowApiService;
+    var arpCache = { 
+        getCurrent: sinon.stub().resolves([])
+    };
+    var views;
 
     before('start HTTP server', function () {
         var self = this;
@@ -22,6 +26,7 @@ describe('Http.Api.workflowTasks.2.0', function () {
 
         return helper.startServer([
             dihelper.simpleWrapper(waterline, 'Services.Waterline'),
+            dihelper.simpleWrapper(arpCache, 'ARPCache')
         ])
         .then(function() {
             workflowApiService = helper.injector.get('Http.Services.Api.Workflows');
@@ -29,11 +34,13 @@ describe('Http.Api.workflowTasks.2.0', function () {
             self.sandbox.stub(workflowApiService, 'getTaskDefinitions').resolves();
             self.sandbox.stub(workflowApiService, 'getWorkflowsTasksByName').resolves();
             self.sandbox.stub(workflowApiService, 'deleteWorkflowsTasksByName').resolves();
-        });
-    });
 
-    after('stop HTTP server', function () {
-        return helper.stopServer();
+            views = helper.injector.get('Views');
+            self.sandbox.stub(views, 'get').resolves({});
+            self.sandbox.stub(views, 'render').resolves('{"friendlyName": "dummy", "injectableName": "dummyName", "options": {"oids": "SNMPv2-MIB::sysDescr"}}');
+            self.sandbox.stub(helper.injector.get('ejs'), 'render')
+            .resolves('{"friendlyName": "dummy", "injectableName": "dummyName", "options": {"oids": "SNMPv2-MIB::sysDescr"}}');
+        });
     });
 
     beforeEach('set up mocks', function () {
@@ -52,12 +59,17 @@ describe('Http.Api.workflowTasks.2.0', function () {
             // to logging.
             findOneByTerm: sinon.stub().rejects()
         };
+
     });
 
     afterEach('clean up mocks', function () {
         this.sandbox.reset();
     });
 
+    after('stop HTTP server', function () {
+        this.sandbox.restore();
+        return helper.stopServer();
+    });
 
     describe('workflowsPutTask ', function () {
         it('should persist a task', function () {
@@ -80,14 +92,23 @@ describe('Http.Api.workflowTasks.2.0', function () {
 
     describe('workflowsGetAllTasks', function () {
         it('should return a list of persisted graph objects', function () {
-            var graph = { name: 'foobar' };
-            workflowApiService.getTaskDefinitions.resolves([graph]);
-
+            var workflowTask = {
+                friendlyName: 'dummy',
+                injectableName: 'dummyName',
+                options: {
+                    oids: 'SNMPv2-MIB::sysDescr'
+                }
+            };
+            workflowApiService.getTaskDefinitions.resolves([workflowTask]);
             return helper.request().get('/api/2.0/workflows/tasks')
                 .expect('Content-Type', /^application\/json/)
-                .expect(200, [graph])
-                .expect(function () {
+                .expect(200)
+                .expect(function (res) {
                     expect(workflowApiService.getTaskDefinitions).to.have.been.calledOnce;
+                    expect(res.body).to.have.property('friendlyName', 'dummy');
+                    expect(res.body).to.have.property('injectableName', 'dummyName');
+                    expect(res.body).to.have.property('options').to.be.an('object');
+                    expect(res.body).to.have.deep.property('options.oids', 'SNMPv2-MIB::sysDescr');
                 });
         });
 
@@ -107,23 +128,16 @@ describe('Http.Api.workflowTasks.2.0', function () {
 
     describe('workflowsGetTasksByName', function () {
         var workflowTask = {
-                friendlyName: 'dummy',
-                injectableName: 'dummyName',
-                options: {
-                    oids: 'SNMPv2-MIB::sysDescr'
-                }
-            };
+            friendlyName: 'dummy',
+            injectableName: 'dummyName',
+            options: {
+                oids: 'SNMPv2-MIB::sysDescr'
+            }
+        };
 
         it('should return a particular task persisted graph objects', function () {
             workflowApiService.getWorkflowsTasksByName.resolves(workflowTask);
             return helper.request().get('/api/2.0/workflows/tasks/'+workflowTask.injectableName)
-            .send( {
-                friendlyName: 'dummy',
-                injectableName: 'dummyName',
-                options: {
-                    oids: 'SNMPv2-MIB::sysDescr'
-                }
-            })
             .expect('Content-Type', /^application\/json/)
             .expect(200)
             .expect(function ( res ) {
@@ -141,10 +155,12 @@ describe('Http.Api.workflowTasks.2.0', function () {
             var badGraphName = 'invalidName';
             var Errors = helper.injector.get('Errors');
             workflowApiService.getWorkflowsTasksByName.rejects(new Errors.NotFoundError('test'));
+            views.render.resolves('{"message": "error"}');
             return helper.request().get('/api/2.0/workflows/tasks/'+badGraphName)
             .expect('Content-Type', /^application\/json/)
             .expect(404);
         });
+
     });
 
     describe('workflowsDeleteTasksByName', function () {
@@ -167,7 +183,8 @@ describe('Http.Api.workflowTasks.2.0', function () {
 
         it('should delete the Task with DELETE /workflows/tasks/injectableName', function () {
             return helper.request().delete('/api/2.0/workflows/tasks/'+ workflowTask.injectableName)
-                .expect(200);
+                .expect(204);
         });
     });
+
 });

@@ -1,0 +1,36 @@
+{
+    "title": "default-obm-service",
+    "definitions": {
+        "service": {
+        },
+        "ObmBase": {
+            "description": "OBM settings",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "service": {
+                    "type": "string"
+                },
+                "nodeId": {
+                    "type": "string"
+                },
+                "config": {
+                    "type": "object"
+                }
+            }
+        },
+        "ObmPatch": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"}
+            ]
+        },
+        "Obm": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"},
+                {"required": ["nodeId", "service", "config"]}
+            ]
+        }
+    }
+}

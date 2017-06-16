@@ -2,13 +2,14 @@
 
 __`on-http` is the HTTP server for RackHD__
 
-_Copyright 2015, EMC, Inc._
+_Copyright 2015-2016, EMC, Inc._
 
 ## Installation
 
     rm -rf node_modules
     npm install
     npm run apidoc
+    npm run taskdoc
 
 ## Running
 
@@ -18,6 +19,16 @@ Note: requires MongoDB and RabbitMQ to be running to start correctly.
 
  * http://127.0.0.1/ui -- RackHD Web UI
  * http://127.0.0.1/docs -- RackHD Docs
+ * http://127.0.0.1/taskdoc -- RackHD Task Annotation
+
+## API References
+
+ * http://rackhd.readthedocs.io/en/latest/rackhd/index.html
+ * https://bintray.com/rackhd/docs/apidoc#files
+
+The readthedocs shows API usage for 2.0 by default. Using `api/current/` will
+use the 2.0 API by default. Functional differences between the 1.1 API and the 2.0
+API are listed in readthedocs, however, the 1.1 API is officially deprecated.
 
 ## Config
 
@@ -54,6 +65,11 @@ To run tests and get coverage for CI:
     ./node_modules/.bin/istanbul report cobertura
     # if you want HTML reports locally
     ./node_modules/.bin/istanbul report html
+
+## Client Libraries
+
+Instructions for how to generate client libraries (python, java, go) can be seen on the readthedocs
+* http://rackhd.readthedocs.io/en/latest/rackhd/rackhd_api.html?highlight=swagger#rackhd-client-libraries
 
 ## Building
 

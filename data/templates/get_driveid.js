@@ -3,13 +3,70 @@
 'use strict';
 
 var exec = require('child_process').exec;
+var execSync = require('child_process').execSync;
 
 var cmdDriveWwid = 'ls -l /dev/disk/by-id';
 var cmdVdInfo = 'ls -l /dev/disk/by-path';
 var cmdScsiId = 'lsscsi';
+var cmdSataRawInfo = 'sudo hdparm --Istdout';
 var options = {
     timeout: 10000 //10 seconds
 };
+
+/**
+ * Get SATA drive's logic unit name 
+ * @param {String} sataDrive SATA drive's name, eg. 'sda'
+ * @return {String} SATA drive's logic unit name with 60 characters like:
+ *  'SATADOM2-ML_3SE_________________________20160623AA106710169E'
+ */
+function getSataNameStr(sataDrive) {
+    var output = execSync(cmdSataRawInfo + ' /dev/' + sataDrive);
+    /*  output data like below:
+     *  $ sudo hdparm --Istdout /dev/sda
+     *  dev/sda:
+     *
+     *  0040 3fff 0000 0010 7e00 0200 003f 0000
+     *  0000 0000 514d 3030 3030 3520 2020 2020
+     *  2020 2020 2020 2020 0003 0200 0004 322e
+     *  322e 3120 2020 5145 4d55 2048 4152 4444
+     *  4953 4b20 2020 2020 2020 2020 2020 2020
+     *  2020 2020 2020 2020 2020 2020 2020 8010
+     *  .....
+     *
+     *  Among those raw data:
+     *  Serial number hex string is from Word 10 to 19, total 20 bytes
+     *  Model number hex string is from Word  27 to 46, total 40 bytes
+     */
+    var lines = output.toString().split('\n');
+    var hexLineMatch = /^([0-9A-Fa-f]{4}\s+){7}[0-9A-Fa-f]{4}$/;
+
+    var rawHexStr = lines.reduce(function (result,line) {
+        if(hexLineMatch.test(line)) {
+            result.push(line);
+        }
+        return result;
+    },[]).join(' ').split(' ');
+
+    //Logic unit name string should be: Model Number String + Serial Number String
+    var snHexStr = rawHexStr.slice(10, 20).join('');
+    var modelHexStr = rawHexStr.slice(27, 47).join('');
+    var nameHexStr = modelHexStr + snHexStr;
+
+    var nameStr = '';
+    for(var i = 0; i < nameHexStr.length; i+=2) {
+        var ascii = Number('0x' + nameHexStr.charAt(i) + nameHexStr.charAt(i+1));
+        var nameChar = String.fromCharCode(ascii);
+        if(nameChar === ' ') {
+            nameStr += '_';  // All space should be filled with '_'
+        } else if(nameChar === '\u0000') { // ASCII code 0x00 is parsed as nameChar '\u0000'
+            nameStr += '00';  // ESXi parses ASCII code 0x00 as string '00'
+        } else {
+            nameStr += nameChar;
+        }
+    }
+
+    return nameStr;
+}
 
 /**
  * Parse the Drive WWID output
@@ -28,9 +85,9 @@ function parseDriveWwid(idList) {
 
     //According to SCSI-3 spec, vendor specified logic unit name string is 60
 	//Only IDE and SCSI disk will be retrieved
-    var scsiLines = [], sataLines = [], wwnLines = [], requiredStrLen = 60;
+    var scsiLines = [], sataLines = [], wwnLines = [], usbLines = [];
     lines.forEach(function(line){
-        if ( line && !(line.match('part')) && line.match(/sd[a-z]$|hd[a-z]$/i)){
+        if ( line && !(line.match('part')) && line.match(/[sh]d[a-z]?[a-z]$/i)){
             var nameIndex = line.lastIndexOf('/'), idIndex = line.lastIndexOf('->');
             if (line.indexOf('scsi') === 0) {
                 scsiLines.push([line.slice(nameIndex + 1), line.slice(0, idIndex)]);
@@ -40,6 +97,9 @@ function parseDriveWwid(idList) {
             }
             else if (line.indexOf('wwn') === 0) {
                 wwnLines.push([line.slice(nameIndex + 1), line.slice(0, idIndex)]);
+            }
+            else if (line.indexOf('usb') === 0) {
+                usbLines.push([line.slice(nameIndex + 1), line.slice(0, idIndex)]);
             }
         }
     });
@@ -52,32 +112,26 @@ function parseDriveWwid(idList) {
         return [wwnLine[0], 'naa.' + split[1].slice(2)];
     });
 
-    //ESXi SATA WWID should be ('t10.ATA_____' + VendorInfo + Sub + SerialNumber)
-    //VendorInfo + Sub + SerialNumber should be 60 characters.
-    //Sub is made of N(N = 60 - VendorInfo - SerialNumber) underline '_' symbols
-    //ESXi SATA WWID should finally replace remaing dashs '-' with '2D', '3D' ...
+    //ESXi SATA WWID should be ('t10.ATA_____' + logic unit name)
+    //ESXi SATA WWID should finally replace remaing dashs '-' with '2D', '3D' ..., 'ND', N means
+    //it is the Nth dash.
     //esxiLine example:
     //["sda", "ata-32GB_SATA_Flash_Drive_B061430580090000000F"]
     //esxiSata example
     //["sda", "t10.ATA_____32GB_SATA_Flash_Drive___________________B061430580090000000F"]
-    //Todo: confrim above analysis is correct for all SATA disks.
+    //TODO: confrim above analysis is correct for all SATA disks.
     var esxiSata = sataLines.map(function(esxiLine) {
         var line = esxiLine[1];
-        var headIndex = line.indexOf('-'), snIndex = line.lastIndexOf('_');
+        var headIndex = line.indexOf('-');
         var headStr = ['t10.', line.slice(0, headIndex).toUpperCase(), '_____'].join(''),
-            vendorStr = line.slice(headIndex + 1, snIndex + 1),
-            snStr = line.slice(snIndex + 1),
-            dashStr = '';
-        for (var i = 0; i< requiredStrLen - vendorStr.length - snStr.length; i += 1){
-            dashStr += '_';
-        }
-        var strLine = [headStr, vendorStr, dashStr, snStr].join('');
+            nameStr = getSataNameStr(esxiLine[0]);
+        var strLine = headStr + nameStr;
         //return strLine.replace('-', '2D');
         //ESXi driveid replaces Nth '-' with 'ND' like 2D, 3D
         var strArray = strLine.split('-');
         if (strArray.length !== 1) {
             strLine = strArray[0];
-            for (i = 0; i < strArray.length -1; i += 1){
+            for (var i = 0; i < strArray.length -1; i += 1){
                 strLine = [strLine, (i + 2).toString(), 'D', strArray[i + 1]].join('');
             }
         }
@@ -101,13 +155,17 @@ function parseDriveWwid(idList) {
         return [esxiLine[0], 'naa.' + split[1].slice(1)];
     });
 
+    var esxiUsb = usbLines.map(function(esxiLine) {
+        return [esxiLine[0], 'mpx.'];
+    });
+
     //linuxLine example: ["sda", "scsi-35000c500725f45d7"]
     //linuxParsed example: ["sda", "/dev/disk/by-id/scsi-35000c500725f45d7"]
-    var linuxParsed = sataLines.concat(scsiLines).map(function(linuxLine) {
+    var linuxParsed = sataLines.concat(scsiLines, usbLines).map(function(linuxLine) {
         return [linuxLine[0], '/dev/disk/by-id/' + linuxLine[1]];
     });
 
-    return {esxiDriveIds: esxiSata.concat(esxiScsi), linuxDriveIds: linuxParsed};
+    return {esxiDriveIds: esxiSata.concat(esxiScsi, esxiUsb), linuxDriveIds: linuxParsed};
 }
 
 
@@ -117,6 +175,12 @@ function parseDriveWwid(idList) {
  * @return {Array} include device name, virtual disk name and scsi ID for each disk
  */
 function parseVdInfo(pathList) {
+    /**
+     * ls -l /dev/disk/by-path output example:
+     * total 0
+     * lrwxrwxrwx 1 root root  9 Dec 30 11:55 pci-0000:00:10.0-scsi-0:0:0:0 -> ../../sda
+     * lrwxrwxrwx 1 root root 10 Dec 30 11:55 pci-0000:00:10.0-scsi-0:0:0:0-part1 -> ../../sda1
+     */
     var lines = pathList.split('\n').map(function(line) {
         var split = line.split(/\s+/);
         return [split[8],split[10]].join('->');
@@ -132,10 +196,14 @@ function parseVdInfo(pathList) {
     });
 
     return pciLines.map(function(line) {
-        var scsiId = line[1].slice(line[1].lastIndexOf('-') + 1), vdStr;
-        if (scsiId.split(':').length === 4){
-            var scsiIdArray = scsiId.split(':');
-            vdStr = ['/c', scsiIdArray[0], '/v', scsiIdArray[2]].join('');
+        var scsiId = line[1].slice(line[1].lastIndexOf('-') + 1),
+            vdStr = '';
+        var scsiIdArray = scsiId.split(':');
+        if (scsiIdArray.length === 4){
+            //Suppose controller id = 0 stands for JBOD
+            if (scsiIdArray[1] !== "0") {
+                vdStr = ['/c', scsiIdArray[0], '/v', scsiIdArray[2]].join('');
+            }
         }
         return [line[0], vdStr, scsiId];
     });
@@ -147,6 +215,10 @@ function parseVdInfo(pathList) {
  * @return {Array} include device name and scsi info for each disk
  */
 function parseScsiInfo(lsscsiList) {
+    /**
+     * lsscsi output example:
+     * [2:0:0:0]    disk    VMware   Virtual disk     1.0   /dev/sda
+    */
     var lines = lsscsiList.split('\n');
     return lines.map(function(line) {
         if(line){
@@ -185,6 +257,18 @@ function buildDriveMap(wwidData, vdData, scsiData) {
                 }
             }
         });
+        //vmhbaAdapter:CChannel:TTarget:LLUN
+        //Adapter is set to default value 32 for only one eUsb
+        if (esxiWwid[1] === "mpx.") {
+            esxiWwid[1] = '';
+            if (scsiId !== '') {
+                var hctl = scsiId.split(":");
+                if (hctl.length === 4) {
+                    esxiWwid[1] = "mpx.vmhba32:C".concat(hctl[1], ":T", hctl[2], ":L", hctl[3]);
+                }
+            }
+            vd = '';
+        }
         driveIds.push({"scsiId": scsiId, "virtualDisk": vd,
             "esxiWwid": esxiWwid[1], "devName": diskPath});
     });

@@ -15,8 +15,12 @@ d-i keyboard-configuration/layoutcode string us
 # netcfg will choose an interface that has link if possible. This makes it
 # skip displaying a list if there is more than one interface.
 d-i netcfg/choose_interface select auto
+<% if (typeof hostname !== 'undefined') { %>
 d-i netcfg/get_hostname string <%=hostname%>
+<% } %>
+<% if (typeof domain !== 'undefined') { %>
 d-i netcfg/get_domain string <%=domain%>
+<%} %>
 
 
 # Disable that annoying WEP key dialog.
@@ -24,8 +28,19 @@ d-i netcfg/wireless_wep string
 ### Mirror settings
 # If you select ftp, the mirror/country string does not need to be set.
 d-i mirror/country string manual
-d-i mirror/http/hostname string <%=server%>:<%=port%>
-d-i mirror/http/directory string /ubuntu
+# Get server:port from repo
+<% var repoHostname = repo.match(/^(https?:\/\/)?([a-zA-Z0-9\.:-]+)/)[2] -%>
+d-i mirror/http/hostname string <%=repoHostname%>
+# Get directory from repo
+<% var repoDirectory = repo.replace(/^(https?:\/\/)?([a-zA-Z0-9\.:-]+)/g,"") -%>
+d-i mirror/http/directory string <%=repoDirectory%>
+
+d-i preseed/early_command string \
+<%_ if( typeof progressMilestones !== 'undefined' && progressMilestones.preConfigUri ) { _%>
+wget 'http://<%=server%>:<%=port%><%-progressMilestones.preConfigUri%>' || true; \
+<%_ } _%>
+umount /media || true;
+
 d-i apt-setup/restricted boolean false
 d-i mirror/http/proxy string
 d-i apt-setup/universe boolean false
@@ -48,6 +63,11 @@ d-i time/zone string US/Pacific
 d-i clock-setup/ntp boolean true
 
 ### Partitioning
+d-i partman/early_command string \
+<%_ if( typeof progressMilestones !== 'undefined' && progressMilestones.startPartitionUri ) { _%>
+wget 'http://<%=server%>:<%=port%><%-progressMilestones.startPartitionUri%>' || true;
+<%_ } _%>
+
 d-i partman-auto/disk string <%=installDisk%>
 d-i partman-auto/method string lvm
 
@@ -128,9 +148,13 @@ d-i passwd/root-password-crypted password <%=rootEncryptedPassword%>
 tasksel tasksel/first multiselect ubuntu-server
 
 # Individual additional packages to install
-<% var pkgs = (typeof kvm === 'undefined' ? '' : 'qemu-kvm virt-manager libvirt0 python-libvirt bridge-utils') -%>
-d-i pkgsel/include string openssh-server curl <%=pkgs%>
-
+<% var pkgs = ((typeof kvm === 'undefined' || !kvm) ? '' : 'qemu-kvm virt-manager libvirt0 python-libvirt bridge-utils') -%>
+# Minimum packages (see postinstall.sh)
+d-i pkgsel/include string openssh-server wget curl ssl-cert vlan
+d-i pkgsel/upgrade select safe-upgrade
+d-i pkgsel/update-policy select none
+d-i pkgsel/language-packs multiselect en
+d-i pkgsel/install-language-support boolean false
 # Policy for applying updates. May be "none" (no automatic updates),
 # "unattended-upgrades" (install security updates automatically), or
 # "landscape" (manage system with Landscape).
@@ -144,6 +168,8 @@ d-i grub-installer/only_debian boolean true
 # OS, which is less safe as it might not be able to boot that other OS.
 d-i grub-installer/with_other_os boolean true
 
+d-i grub-installer/bootdev string <%=installDisk%>
+
 # Avoid that last message about the install being complete.
 d-i finish-install/reboot_in_progress note
 
@@ -151,7 +177,7 @@ d-i finish-install/reboot_in_progress note
 xserver-xorg xserver-xorg/autodetect_monitor boolean true
 #### Advanced options
 ### Running custom commands during the installation
-# d-i pretemplateing is inherently not secure. Nothing in the installer checks
+# d-i preseeding is inherently not secure. Nothing in the installer checks
 # for attempts at buffer overflows or other exploits of the values of a
 # preconfiguration file like this one. Only use preconfiguration files from
 # trusted locations! To drive that home, and because it's generally useful,
@@ -159,25 +185,51 @@ xserver-xorg xserver-xorg/autodetect_monitor boolean true
 # automatically.
 
 # This first command is run as early as possible, just after
-# pretemplateing is read.
-#d-i pretemplate/early_command string anna-install some-udeb
+# preseed is read.
+#d-i preseed/early_command string anna-install some-udeb
 # This command is run immediately before the partitioner starts. It may be
-# useful to apply dynamic partitioner pretemplateing that depends on the state
-# of the disks (which may not be visible when pretemplate/early_command runs).
+# useful to apply dynamic partitioner preseeding that depends on the state
+# of the disks (which may not be visible when preseed/early_command runs).
 #d-i partman/early_command
 #       string debconf-set partman-auto/disk "$(list-devices disk | head -n1)"
 # This command is run just before the install finishes, but when there is
 # still a usable /target directory. You can chroot to /target and use it
 # directly, or use the apt-install and in-target commands to easily install
 # packages and run commands in the target system.
-#d-i pretemplate/late_command string apt-install zsh; in-target chsh -s /bin/zsh
+#d-i preseed/late_command string apt-install zsh; in-target chsh -s /bin/zsh
 
 d-i preseed/late_command string \
-<%_ if (undefined !== networkDevices && networkDevices.length > 0) { _%>
-wget http://<%=server%>:<%=port%>/api/common/templates/ubuntu-interfaces -O /etc/network/interfaces; \
+<%_ if( typeof progressMilestones !== 'undefined' && progressMilestones.postConfigUri ) { _%>
+in-target curl -X POST -H 'Content-Type:application/json' 'http://<%=server%>:<%=port%><%-progressMilestones.postConfigUri%>' || true; \
 <%_ } _%>
-in-target wget http://<%=server%>:<%=port%>/api/common/templates/post-install-ubuntu.sh -O ./post-install.sh; \
+
+#enable root ssh
+in-target sed -i 's/PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config; \
+
+#Enable Network standards that supports VLANs
+#Load the 8021q module into the kernel
+in-target modprobe 8021q; \
+in-target su -c 'echo "8021q" >> /etc/modules'; \
+
+#config vlan
+<%_ if (typeof networkDevices !== 'undefined' && networkDevices.length > 0) { _%>
+<%_ networkDevices.forEach(function(n) { _%>
+    <%_ for (p in n) { _%>
+        <%_ ip = n[p]; _%>
+        <%_ if (['ipv4','ipv6'].indexOf(p) === -1 || undefined == ip) continue; _%>
+        <%_ if (undefined !== ip.vlanIds) { _%>
+            <%_ ip.vlanIds.forEach(function(vid) { _%>
+in-target vconfig add ip.device <%=vid%>; \
+            <%_ }); _%>
+        <%_ } _%>
+    <%_ } _%>
+<%_ }); _%>
+wget http://<%=server%>:<%=port%>/api/current/templates/ubuntu-interfaces?nodeId=<%=nodeId%> -O /etc/network/interfaces; \
+<%_ } _%>
+in-target wget http://<%=server%>:<%=port%>/api/current/templates/post-install-ubuntu.sh?nodeId=<%=nodeId%> -O ./post-install.sh; \
 in-target chmod +x ./post-install.sh; \
 in-target ./post-install.sh; \
-in-target wget http://<%=server%>:<%=port%>/api/common/templates/ubuntu-sources -O /etc/apt/sources.list; \
-in-target curl http://<%=server%>:<%=port%>/api/common/templates/<%=completionUri%>
+in-target wget http://<%=server%>:<%=port%>/api/current/templates/ubuntu-sources?nodeId=<%=nodeId%> -O /etc/apt/sources.list; \
+in-target wget http://<%=server%>:<%=port%>/api/current/templates/<%=rackhdCallbackScript%>?nodeId=<%=nodeId%> -O /etc/rc2.d/S99callback; \
+in-target chmod +x /etc/rc2.d/S99callback; \
+in-target curl -X POST -H 'Content-Type:application/json' http://<%=server%>:<%=port%>/api/current/notification?nodeId=<%=nodeId%>

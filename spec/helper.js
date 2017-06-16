@@ -1,4 +1,4 @@
-// Copyright 2015, EMC, Inc.
+// Copyright © 2017 Dell Inc. or its subsidiaries. All Rights Reserved.
 
 'use strict';
 
@@ -7,6 +7,14 @@ require('on-core/spec/helper');
 var util = require('util');
 
 var index = require('../index');
+
+var mockConsul = require('./mock-consul-server.js');
+var mockGrpc = require('./mock-grpc.js');
+var mockery = require('mockery');
+mockery.enable();
+mockery.warnOnUnregistered(false);
+mockery.registerMock('consul', mockConsul);
+mockery.registerMock('grpc', mockGrpc);
 
 global.onHttpContext = index.onHttpContextFactory();
 
@@ -32,13 +40,22 @@ helper.startServer = function (overrides, endpointOpt) {
     helper.setupTestConfig();
 
     helper.injector.get('Services.Configuration')
+        .set('enableUPnP', false)
         .set('skuPackRoot', 'spec/lib/services/sku-static')
-        .set('httpEndpoints', [ _.merge( {}, 
+        .set('httpEndpoints', [_.merge({},
             {
-                'port': 8089,
-                'httpsEnabled': false
+                'port': 8091,
+                'httpsEnabled': false,
+                "yamlName": ["monorail-2.0-sb.yaml"]
             },
-            endpointOpt )
+            endpointOpt),
+            _.merge({},
+                {
+                    'port': 8089,
+                    'httpsEnabled': false,
+                    "yamlName": ["monorail-2.0.yaml", "redfish.yaml"]
+                },
+                endpointOpt)
         ]);
 
     index.injector = helper.injector;

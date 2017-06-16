@@ -9,13 +9,19 @@ describe('Services.Http.Swagger', function() {
     var views;
     function MockSerializable() {}
     function MockSchemaService() {}
+    var mockWaterlineService = {
+        test: {}
+    };
+    var taskProtocol = {activeTaskExists: sinon.stub().resolves({taskId: 'taskid'})}; 
 
     before('inject swagger service', function() {
         helper.setupInjector(_.flattenDeep([
                 onHttpContext.prerequisiteInjectables,
                 onHttpContext.injectables,
                 dihelper.simpleWrapper(MockSerializable, 'Mock.Serializable'),
-                dihelper.simpleWrapper(new MockSchemaService(), 'Http.Api.Services.Schema')
+                dihelper.simpleWrapper(new MockSchemaService(), 'Http.Api.Services.Schema'),
+                dihelper.simpleWrapper(mockWaterlineService, 'Services.Waterline'),
+                dihelper.simpleWrapper(taskProtocol, 'Protocol.Task')
             ])
         );
 
@@ -37,7 +43,15 @@ describe('Services.Http.Swagger', function() {
         });
 
         it('should call controller callback', function() {
-            var req = { swagger: {} };
+            var req = {
+                swagger: {
+                    params: {
+                        sort: {
+                        }
+                    }
+                },
+                query: {}
+            };
             var res = {
                 headersSent: false
             };
@@ -52,7 +66,16 @@ describe('Services.Http.Swagger', function() {
         });
 
         it('should process options', function() {
-            var req = { swagger: {} };
+            var req = {
+                swagger: {
+                    params: {
+                        sort: {
+                        }
+                    }
+                },
+                query: {}
+            };
+
             var res = {
                 headersSent: false
             };
@@ -74,6 +97,8 @@ describe('Services.Http.Swagger', function() {
                 query: {},
                 swagger: {
                     params: {
+                        sort: {
+                        },
                         firstName: {
                             parameterObject: {
                                 in: 'query',
@@ -89,14 +114,6 @@ describe('Services.Http.Swagger', function() {
                                 definition: { name: 'lastName' }
                             },
                             value: 'HD'
-                        },
-                        middleName: {
-                            parameterObject: {
-                                in: 'query',
-                                type: 'string',
-                                definition: { name: 'middleName' }
-                            },
-                            value:'John+Paul+George'
                         },
                         undefinedName: {
                             parameterObject: {
@@ -131,15 +148,90 @@ describe('Services.Http.Swagger', function() {
                     .and.to.equal('Rack');
                 expect(req.swagger.query).to.have.property('lastName')
                     .and.to.equal('HD');
-                expect(req.swagger.query).to.have.property('middleName')
-                    .and.to.deep.equal(['John', 'Paul', 'George']);
                 expect(req.swagger.query).not.to.have.property('inBody');
                 expect(req.swagger.query).not.to.have.property('undefinedName');
             });
         });
 
+        it('should process sort query', function() {
+            var req = {
+                query:{
+                    sort:"id"
+                },
+                swagger: {
+                    params: {
+                        sort: {
+                            raw: "id"
+                        }
+                    }
+                }
+            };
+            var res = {
+                headersSent: false
+            };
+            var mockData = [
+                {
+                    id: '1234',
+                    name: 'dummy'
+                },
+                {
+                    id: '5679',
+                    name: 'dummy2'
+                }];
+            var optController = swaggerService.controller(mockController);
+
+            expect(optController).to.be.a('function');
+            mockController.resolves(mockData);
+            return optController(req, res, mockNext).then(function() {
+                expect(req.swagger.params.sort).to.have.property('raw');
+                expect(res.body).to.deep.equal(mockData);
+                expect(mockNext).to.be.called.once;
+
+            });
+        });
+
+        it('should not process sort function, when not present', function() {
+            var req = {
+                query:{
+                    id:"1234"
+                },
+                swagger: {
+                    params: {
+                        sort: {
+                        }
+                    }
+                }
+            };
+            var res = {
+                headersSent: false
+            };
+            var mockData = [
+                {
+                    id: '1234',
+                    name: 'dummy'
+                }];
+            var optController = swaggerService.controller(mockController);
+
+            expect(optController).to.be.a('function');
+            mockController.resolves(mockData);
+            return optController(req, res, mockNext).then(function() {
+                expect(res.body).to.deep.equal(mockData);
+                expect(mockNext).to.be.called.once;
+
+            });
+        });
+
         it('should not call next after sending headers', function() {
-            var req = { swagger: {} };
+            var req = {
+                swagger: {
+                    params: {
+                        sort: {
+                        }
+                    }
+                },
+                query: {}
+            };
+
             var res = {
                 headersSent: true
             };
@@ -154,7 +246,16 @@ describe('Services.Http.Swagger', function() {
         });
 
         it('should call next if an error occurs', function() {
-            var req = { swagger: {} };
+            var req = {
+                swagger: {
+                    params: {
+                        sort: {
+                        }
+                    }
+                },
+                query: {}
+            };
+
             var res = {
                 headersSent: false
             };
@@ -164,190 +265,6 @@ describe('Services.Http.Swagger', function() {
             mockController.rejects(mockError);
             return controller(req, res, mockNext).then(function() {
                 expect(mockController).to.be.called.once;
-                expect(mockNext).to.be.calledWith(mockError);
-            });
-        });
-    });
-
-    describe('serializer()', function() {
-        var mockNext;
-        var serializer;
-
-        beforeEach(function() {
-            // Create mock serializable.
-            MockSerializable.prototype.serialize = sinon.stub();
-            MockSerializable.prototype.deserialize = sinon.stub();
-            MockSerializable.prototype.validateAsModel = sinon.stub();
-            MockSerializable.prototype.validatePartial = sinon.stub();
-            MockSerializable.prototype.validate = sinon.stub();
-
-            mockNext = sinon.stub();
-            serializer = swaggerService.serializer('Mock.Serializable');
-        });
-
-        it('should serialize a scalar', function() {
-            var mockData = {
-                data: 'some data'
-            };
-            var req = {};
-            var res = {
-                body: mockData
-            };
-            MockSerializable.prototype.serialize.resolves(mockData);
-            MockSerializable.prototype.validateAsModel.resolves(mockData);
-
-            expect(serializer).to.be.a('function');
-            return serializer(req, res, mockNext).then(function() {
-                expect(res.body).to.equal(mockData);
-                expect(mockNext).to.be.called.once;
-            });
-        });
-
-        it('should serialize an array', function() {
-            var mockData = {
-                data: 'some data'
-            };
-            var req = {};
-            var res = {
-                body: [ mockData, mockData ]
-            };
-
-            MockSerializable.prototype.serialize.resolves(mockData);
-            MockSerializable.prototype.validateAsModel.resolves(mockData);
-
-            expect(serializer).to.be.a('function');
-            return serializer(req, res, mockNext).then(function() {
-                expect(res.body).to.deep.equal([ mockData, mockData ]);
-                expect(mockNext).to.be.called.once;
-            });
-        });
-
-        it('should call next if serializer error occurs', function() {
-            var mockData = {
-                data: 'some data'
-            };
-            var req = {};
-            var res = {
-                body: mockData
-            };
-            var mockError = new Error('serializer error');
-            MockSerializable.prototype.serialize.rejects(mockError);
-
-            expect(serializer).to.be.a('function');
-            return serializer(req, res, mockNext).then(function() {
-                expect(mockNext).to.be.calledWith(mockError);
-            });
-        });
-
-        it('should call next if validation error occurs', function() {
-            var mockData = {
-                data: 'some data'
-            };
-            var req = {};
-            var res = {
-                body: mockData
-            };
-            var mockError = new Error('serializer error');
-            MockSerializable.prototype.serialize.resolves(mockData);
-            MockSerializable.prototype.validateAsModel.rejects(mockError);
-
-            expect(serializer).to.be.a('function');
-            return serializer(req, res, mockNext).then(function() {
-                expect(mockNext).to.be.calledWith(mockError);
-            });
-        });
-    });
-
-    describe('deserializer()', function() {
-        var mockNext;
-        var deserializer;
-
-        beforeEach(function() {
-            // Create mock serializable.
-            MockSerializable.prototype.serialize = sinon.stub();
-            MockSerializable.prototype.deserialize = sinon.stub();
-            MockSerializable.prototype.validateAsModel = sinon.stub();
-            MockSerializable.prototype.validatePartial = sinon.stub();
-            MockSerializable.prototype.validate = sinon.stub();
-
-            mockNext = sinon.stub();
-            deserializer = swaggerService.deserializer('Mock.Serializable');
-        });
-
-        it('should deserialize scalar', function() {
-            var mockData = {
-                data: 'some data'
-            };
-            var req = {
-                body: mockData
-            };
-            var res = {};
-
-            expect(deserializer).to.be.a('function');
-            MockSerializable.prototype.validate.resolves(mockData);
-            MockSerializable.prototype.deserialize.resolves(mockData);
-            return deserializer(req, res, mockNext).then(function() {
-                expect(req.body).to.equal(mockData);
-                expect(mockNext).to.be.called.once;
-            });
-        });
-
-        it('should deserialize array', function() {
-            var mockData = {
-                data: 'some data'
-            };
-            var mockDataArray = [ mockData, mockData ];
-            var req = {
-                body: mockDataArray
-            };
-            var res = {};
-
-            expect(deserializer).to.be.a('function');
-            MockSerializable.prototype.validate.resolves(mockDataArray);
-            MockSerializable.prototype.deserialize.resolves(mockDataArray);
-            return deserializer(req, res, mockNext).then(function() {
-                expect(req.body).to.equal(mockDataArray);
-                expect(mockNext).to.be.called.once;
-            });
-        });
-
-        it('should call next if validation error occurs', function() {
-            var mockError = {
-                message: 'validation error'
-            };
-            var mockData = {
-                data: 'some data'
-            };
-            var req = {
-                body: mockData
-            };
-            var res = {};
-            var mockError = new Error('deserializer error');
-
-            expect(deserializer).to.be.a('function');
-            MockSerializable.prototype.validate.rejects(mockError);
-            return deserializer(req, res, mockNext).then(function() {
-                expect(mockNext).to.be.calledWith(mockError);
-            });
-        });
-
-        it('should call next if deserialize error occurs', function() {
-            var mockError = {
-                message: 'validation error'
-            };
-            var mockData = {
-                data: 'some data'
-            };
-            var req = {
-                body: mockData
-            };
-            var res = {};
-            var mockError = new Error('deserializer error');
-
-            expect(deserializer).to.be.a('function');
-            MockSerializable.prototype.validate.resolves(mockData);
-            MockSerializable.prototype.deserialize.rejects(mockError);
-            return deserializer(req, res, mockNext).then(function() {
                 expect(mockNext).to.be.calledWith(mockError);
             });
         });
@@ -404,19 +321,26 @@ describe('Services.Http.Swagger', function() {
             // Initialize stubs
             mockNext = sinon.stub();
             send = sinon.stub();
-            status = sinon.stub().returns({send: send});
+            status = sinon.stub();
             set = sinon.stub();
 
             // Mock request and response objects
             res = {
                 headersSent: false,
                 body: {},
+                send: send,
                 status: status,
-                set: set
+                set: set,
+                locals: "dummy"
             };
             req = {
                 swagger: {
-                    options: {}
+                    options: {},
+                    operation:{
+                        api:{
+                            basePath: "nothing"
+                        }
+                    }
                 }
             };
 
@@ -502,9 +426,20 @@ describe('Services.Http.Swagger', function() {
             });
         });
 
+        it('should throw 500 on invalid template', function() {
+            res.body = { message: "foo" };
+            return renderer(req, res, 'foo', mockNext)
+            .then(function() {
+                expect(mockNext).to.be.calledWithMatch({status: 500});
+            },
+            function(err) {
+                expect(err).to.be.undefined;
+            });
+        });
+
         it('should throw 500 on render error', function() {
             res.body = { message: "foo" };
-            views.render = this.sandbox.stub().resolves();
+            views.render = this.sandbox.stub().rejects(new Error());
             return renderer(req, res, 'foo', mockNext)
             .then(function() {
                 expect(mockNext).to.be.calledWithMatch({status: 500});
@@ -514,4 +449,267 @@ describe('Services.Http.Swagger', function() {
             });
         });
     });
-});;
+
+    describe('makeRenderableOptions()', function() {
+        var makeRenderableOptions;
+        var config;
+        var env;
+        var configGetStub;
+        var envGetStub;
+        var res;
+        var req;
+
+        before(function() {
+            makeRenderableOptions = swaggerService.makeRenderableOptions;
+            config = helper.injector.get('Services.Configuration');
+            env = helper.injector.get('Services.Environment');
+            envGetStub = sinon.stub(env, 'get');
+            res = {
+                locals: {
+                    scope: ['global']
+                }
+            };
+            req = {
+                swagger: {
+                    options: {},
+                    operation:{
+                        api:{
+                            basePath: 'nothing'
+                        }
+                    }
+                }
+            };
+        });
+
+        afterEach(function() {
+            configGetStub.restore();
+            taskProtocol.activeTaskExists.reset();
+        });
+
+        it('should return file.server when configuring fileServerAddress', function() {
+            configGetStub = sinon.stub(config, 'get', function(key, defaults) {
+                var obj = {
+                    apiServerAddress: '10.1.1.1',
+                    apiServerPort: 80,
+                    fileServerAddress: '10.1.1.2',
+                    fileServerPort: 8080,
+                    fileServerPath: '/static'
+                };
+                if (obj.hasOwnProperty(key)) {
+                    return obj[key];
+                } else {
+                    return defaults;
+                }
+            });
+            return makeRenderableOptions(req, res, {target: 'nodeId'}, true)
+            .then(function(options) {
+                expect(options.file.server).to.equal('http://10.1.1.2:8080/static');
+                expect(options.taskId).to.equal('taskid');
+                expect(taskProtocol.activeTaskExists).to.be.calledOnce;
+                expect(taskProtocol.activeTaskExists).to.be.calledWith('nodeId');
+            });
+        });
+
+        it('should return file.server when not configuring fileServerAddress', function() {
+            configGetStub = sinon.stub(config, 'get', function(key, defaults) {
+                var obj = {
+                    apiServerAddress: '10.1.1.1',
+                    apiServerPort: 80
+                };
+                if (obj.hasOwnProperty(key)) {
+                    return obj[key];
+                } else {
+                    return defaults;
+                }
+            });
+            return makeRenderableOptions(req, res, {}, true)
+            .then(function(options) {
+               expect(options.file.server).to.equal('http://10.1.1.1:80');
+            });
+        });
+    });
+
+    describe('addLinkHeader()', function() {
+        var addLinksHeader;
+
+        var res = {
+            links: sinon.stub()
+        };
+
+        before(function() {
+            addLinksHeader = swaggerService.addLinksHeader;
+        });
+
+        beforeEach(function() {
+            res.links.reset();
+        });
+
+        it('should not add links without $skip or $top', function() {
+            var req = {
+                url: '/api/2.0/things',
+                swagger: { query: { } }
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(10);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).not.to.be.called;
+            });
+        });
+
+        it('should not add links if object count is less than $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $top: 10} }
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(8);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).not.to.be.called;
+            });
+        });
+
+        it('should not add links if object count is equal to $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $top: 10} }
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(10);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).not.to.be.called;
+            });
+        });
+
+        it('should add links with $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $top: 10} }
+            };
+            var expected = {
+                first: '/api/2.0/things?$skip=0&$top=10',
+                next: '/api/2.0/things?$skip=10&$top=10',
+                last: '/api/2.0/things?$skip=30&$top=10'
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(40);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).to.be.calledWith(expected);
+            });
+        });
+
+        it('should add links with $skip and $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $skip: 8, $top: 9} }
+            };
+            var expected = {
+                first: '/api/2.0/things?$skip=0&$top=8',
+                next: '/api/2.0/things?$skip=17&$top=9',
+                prev: '/api/2.0/things?$skip=0&$top=8',
+                last: '/api/2.0/things?$skip=36&$top=9'
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(37);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).to.be.calledWith(expected);
+            });
+        });
+
+        it('should add links with $skip', function() {
+            var req = {
+                url: '/api/2.0/things?$skip=10',
+                swagger: { query: { $skip: 10} }
+            };
+            var expected = {
+                first: '/api/2.0/things?$skip=0&$top=10',
+                prev: '/api/2.0/things?$skip=0&$top=10',
+                last: '/api/2.0/things?$skip=10&$top=30'
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(40);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).to.be.calledWith(expected);
+            });
+        });
+
+        it('should add links with $skip and $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $skip: 20, $top: 10} }
+            };
+            var expected = {
+                first: '/api/2.0/things?$skip=0&$top=10',
+                next: '/api/2.0/things?$skip=30&$top=10',
+                prev: '/api/2.0/things?$skip=10&$top=10',
+                last: '/api/2.0/things?$skip=30&$top=10'
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(40);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).to.be.calledWith(expected);
+            });
+        });
+
+        it('should add links with $skip and $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $skip: 5, $top: 10} }
+            };
+            var expected = {
+                first: '/api/2.0/things?$skip=0&$top=5',
+                next: '/api/2.0/things?$skip=15&$top=10',
+                prev: '/api/2.0/things?$skip=0&$top=5',
+                last: '/api/2.0/things?$skip=30&$top=10'
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(40);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).to.be.calledWith(expected);
+            });
+        });
+
+        it('should add links with $skip and $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $skip: 0, $top: 8} }
+            };
+            var expected = {
+                first: '/api/2.0/things?$skip=0&$top=8',
+                next: '/api/2.0/things?$skip=8&$top=8',
+                last: '/api/2.0/things?$skip=32&$top=8'
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(37);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).to.be.calledWith(expected);
+            });
+        });
+
+        it('should add links with $skip and $top', function() {
+            var req = {
+                url: '/api/2.0/things?$top=10',
+                swagger: { query: { $skip: 30, $top: 10} }
+            };
+            var expected = {
+                first: '/api/2.0/things?$skip=0&$top=10',
+                prev: '/api/2.0/things?$skip=20&$top=10',
+                last: '/api/2.0/things?$skip=30&$top=10'
+            };
+
+            mockWaterlineService.test.count = sinon.stub().resolves(40);
+            return addLinksHeader(req, res, 'test')
+            .then(function() {
+                expect(res.links).to.be.calledWith(expected);
+            });
+        });
+    });
+});

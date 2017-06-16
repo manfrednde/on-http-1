@@ -1,0 +1,45 @@
+{
+    "title": "amt-obm-service",
+    "definitions": {
+        "ObmBase": {
+            "description": "AMT OBM settings",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "nodeId": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "host": {
+                            "description": "Host address",
+                            "type": "string"
+                        },
+                        "password": {
+                            "description": "Host password",
+                            "type": "string"
+                        }
+                    },
+                    "required": ["host", "password"]
+                }
+            }
+        },
+        "ObmPatch": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"}
+            ]
+        },
+        "Obm": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"},
+                {"required": ["nodeId", "service", "config"]}
+            ]
+        }
+    }
+}

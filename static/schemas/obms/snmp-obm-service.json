@@ -1,0 +1,45 @@
+{
+    "title": "snmp-obm-service",
+    "definitions": {
+        "ObmBase": {
+            "description": "OBM settings",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "nodeId": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "required": ["host", "community" ],
+                        "host": {
+                            "description": "The IP address",
+                            "type": "string"
+                        },
+                        "community": {
+                            "description": "community",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "ObmPatch": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"}
+            ]
+        },
+        "Obm": {
+            "type": "object",
+            "allOf": [
+                {"$ref": "#/definitions/ObmBase"},
+                {"required": ["nodeId", "service", "config"]}
+            ]
+        }
+    }
+}

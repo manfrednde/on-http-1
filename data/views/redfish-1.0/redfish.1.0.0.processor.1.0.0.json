@@ -1,0 +1,26 @@
+{
+    "@odata.context" : "<%= basepath %>/$metadata#Systems/Links/Members/<%= identifier %>/Processors/Members/$entity",
+    "@odata.id": "<%= url %>",
+    "@odata.type": "#Processor.1.0.0.Processor",
+    "Oem" : {},
+    "Id": "<%=socketId%>",
+    "Name": "",
+    "Socket": "<%= catData['Processor Information'][socketId]['Socket Designation'] %>",
+    "ProcessorType": "CPU",
+    "ProcessorArchitecture": "x86",
+    "InstructionSet": "<%= catData.kernel.machine.replace('_', '-') %>",
+    "Manufacturer": "<%= catData['Processor Information'][socketId].Manufacturer %>",
+    "Model": "<%= catData['Processor Information'][socketId].Version %>",
+    "MaxSpeedMHz": <%= catData['Processor Information'][socketId]['Max Speed'].split(' ')[0] %>,
+    "TotalCores": <%= catData['Processor Information'][socketId]['Core Count'] %>,
+    "TotalThreads": <%= catData['Processor Information'][socketId]['Thread Count'] %>,
+    "Status": {},
+    "ProcessorId" : {
+        "VendorId": "<%= catData.cpu[socketId].vendor_id %>",
+        "IdentificationRegisters": "<%= catData['Processor Information'][socketId].ID %>",
+        "EffectiveFamily": "<%= catData['Processor Information'][socketId].Family %>",
+        "EffectiveModel": "<%= catData['Processor Information'][socketId].Version %>",
+        "Step": "",
+        "MicrocodeInfo": ""
+    }
+}

@@ -1,0 +1,91 @@
+{
+    "@odata.context" : "<%= basepath %>/$metadata#Systems/Members/$entity",
+    "@odata.id": "<%= url %>",
+    "@odata.type": "#ComputerSystem.1.0.0.ComputerSystem",
+    "Oem" : {},
+    "Id": "<%= identifier %>",
+    "Description": "",
+    "Name": "Computer System",
+    "SystemType": "<%= systemType %>",
+    "AssetTag": "<%= catData.dmi.chassis.asset_tag %>",
+    "Manufacturer": "<%= catData.dmi.system.Manufacturer %>",
+    "Model": "<%= catData.dmi.system.product_name %>",
+    "SKU": "<%= catData.dmi.system.sku_number %>",
+    "SerialNumber": "<%= catData.dmi.system.serial_number %>",
+    "PartNumber": "",
+    "UUID": "<%= catData.dmi.system.uuid.toLowerCase() %>",
+    "HostName": "",
+    "IndicatorLED": "<%= chassisData.uid %>",
+    "PowerState": "<%= chassisData.power==='Unknown' ? 'On' : chassisData.power %>",
+    "Bios": {},
+    "Boot": {},
+    "BiosVersion": "<%= catData.dmi.bios.version.trim() %> <%= catData.dmi.bios.bios_revision.trim() %> <%= catData.dmi.bios.release_date.trim() %>",
+    "ProcessorSummary": {
+        "Count": <%= catData.cpu.real %>,
+        "Model": "<%= catData.dmi.processor.version %>",
+        "Status": {}
+    },
+    "MemorySummary": {
+        <% var memsize = 0; %>
+        <% catData['Memory Device'].forEach(function(dev) { %>
+        <%     var size = dev.Size.split(' ')[0]; %>
+        <%     var units = dev.Size.split(' ')[1]; %>
+        <%     size = isNaN(size) ? 0 : size; %>
+        <%     size = (units === 'GB') ? size * 1024 : size; %>
+        <%     memsize = memsize + parseInt(size); %>
+        <% }); %>
+        <% memsize = memsize / 1024; %>
+        "TotalSystemMemoryGiB": <%= memsize %>,
+        "Status": {}
+    },
+    "Actions": {
+        "Oem": {
+            "RackHD": {
+                "#RackHD.BootImage": {
+                    "target": "<%=basepath%>/Systems/<%=identifier%>/Actions/RackHD.BootImage"
+                }
+            }
+        },
+        "#ComputerSystem.Reset": {
+            "target": "<%=basepath%>/Systems/<%=identifier%>/Actions/ComputerSystem.Reset"
+        }
+    },
+    "Status": {},
+    "Processors": {
+        "@odata.id": "<%= basepath %>/Systems/<%= identifier %>/Processors"
+    },
+    "EthernetInterfaces": {
+        "@odata.id": "<%= basepath %>/Systems/<%= identifier %>/EthernetInterfaces"
+    },
+    "SimpleStorage": {
+        "@odata.id": "<%= basepath %>/Systems/<%= identifier %>/SimpleStorage"
+    },
+    "LogServices": {
+        "@odata.id": "<%= basepath %>/Systems/<%= identifier %>/LogServices"
+    },
+    "Links": {
+        "Oem": {},
+        "ManagedBy@odata.count": <%= obm.length %>,
+        "ManagedBy": [
+            <% obm.forEach(function(obm, i, arr) { %>
+                {
+                    "@odata.id": "<%= basepath %>/Managers/<%= obm %>"
+                }
+                <%= ( arr.length > 0 && i < arr.length-1 ) ? ',': '' %>
+            <% }); %>
+        ],
+        "PoweredBy@odata.count": 0,
+        "PoweredBy": [],
+        "CooledBy@odata.count": 0,
+        "CooledBy": [],
+        "Chassis@odata.count": <%= chassis.length %>,
+        "Chassis": [
+            <% chassis.forEach(function(chassis, i, arr) { %>
+                {
+                    "@odata.id": "<%= basepath %>/Chassis/<%= chassis %>"
+                }
+                <%= ( arr.length > 0 && i < arr.length-1 ) ? ',': '' %>
+            <% }); %>
+        ]
+    }
+}

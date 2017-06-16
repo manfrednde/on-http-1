@@ -9,6 +9,7 @@ module.exports = Runner;
 
 di.annotate(Runner, new di.Provide('app'));
 di.annotate(Runner, new di.Inject(
+        'Constants',
         'Http.Server',
         'Services.Core',
         'Services.Configuration',
@@ -18,10 +19,12 @@ di.annotate(Runner, new di.Inject(
         'fileService',
         'Promise',
         'Http.Services.SkuPack',
-        'Acl.Services'
+        'Http.Services.Api.Account',
+        'Http.Services.uPnP'
     )
 );
 function Runner(
+    constants,
     HttpService,
     core,
     configuration,
@@ -31,7 +34,8 @@ function Runner(
     fileService,
     Promise,
     skuPack,
-    aclService
+    accountService,
+    uPnPService
 ) {
     var services = [];
 
@@ -49,10 +53,16 @@ function Runner(
                 });
             })
             .then(function() {
-                return skuPack.start(configuration.get('skuPackRoot', './skupack.d'));
+                return skuPack.start(configuration.get('skuPackRoot', 
+                           constants.HttpStaticDir.skupack));
             })
             .then(function() {
-                return aclService.start();
+                return accountService.start();
+            })
+            .then(function() {
+                if(configuration.get('enableUPnP', true)) {
+                    return uPnPService.start();
+                }
             })
             .then(function() {
                 var endpoints = configuration.get('httpEndpoints', [{port: 8080}]);
